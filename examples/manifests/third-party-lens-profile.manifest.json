@@ -1,0 +1,17 @@
+{
+  "id": "example-third-party-profile",
+  "kind": "lens-profile",
+  "title": "Example Third-Party Lens Profile",
+  "license": "CC-BY-4.0",
+  "author": "Original Author Name",
+  "source": "https://example.com/source",
+  "sourceCommit": "abc123",
+  "redistributionAllowed": true,
+  "derivativeOf": "Original profile database name",
+  "copyright": "Copyright Original Author",
+  "notice": "See NOTICE.md",
+  "licenseFile": "LICENSE",
+  "modifications": [
+    "Example only. Replace with actual modification history."
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "id": "neutral-rec709-v1",
+  "kind": "lut",
+  "title": "Neutral Rec.709 v1",
+  "license": "CC0-1.0",
+  "author": "LumaForge contributors",
+  "source": "original",
+  "redistributionAllowed": true,
+  "derivativeOf": null,
+  "copyright": "Dedicated to the public domain via CC0-1.0",
+  "licenseFile": "LICENSE",
+  "notice": "See NOTICE.md",
+  "files": [
+    {
+      "path": "neutral-rec709-v1.cube",
+      "role": "lut"
+    }
+  ]
+}

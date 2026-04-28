@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LumaForge Profile Manifest",
+  "type": "object",
+  "required": [
+    "id",
+    "kind",
+    "title",
+    "license",
+    "author",
+    "source",
+    "redistributionAllowed",
+    "derivativeOf",
+    "copyright"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]*$"
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "lut",
+        "camera-profile",
+        "lens-profile",
+        "calibration-data",
+        "icc-profile",
+        "dcp-profile",
+        "matrix",
+        "metadata",
+        "other"
+      ]
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "license": {
+      "type": "string",
+      "minLength": 1,
+      "description": "SPDX license identifier when possible, or a precise license expression."
+    },
+    "author": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Use 'original' for first-party assets, or a stable source URL for third-party assets."
+    },
+    "sourceCommit": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sourceRelease": {
+      "type": "string",
+      "minLength": 1
+    },
+    "redistributionAllowed": {
+      "type": "boolean",
+      "const": true
+    },
+    "derivativeOf": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "copyright": {
+      "type": "string",
+      "minLength": 1
+    },
+    "notice": {
+      "type": "string",
+      "minLength": 1
+    },
+    "licenseFile": {
+      "type": "string",
+      "minLength": 1
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "path"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-fA-F0-9]{64}$"
+          },
+          "role": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "modifications": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  },
+  "additionalProperties": true
+}
