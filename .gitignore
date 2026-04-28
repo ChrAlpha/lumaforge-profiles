@@ -141,3 +141,27 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# Local drop zone for untracked profile imports
+.local/
+.local-profile-imports/
+imports/
+incoming/
+
+# Build outputs
+dist/
+tmp/
+.temp/
+
+# Profile assets are stored locally and packed into releases,
+# but should not be committed into Git history.
+profiles/*/assets/**
+!profiles/*/assets/.gitkeep
+
+# Optional fallback for accidentally placed assets
+*.cube
+*.CUBE
+*.dcp
+*.DCP
+*.lcp
+*.LCP

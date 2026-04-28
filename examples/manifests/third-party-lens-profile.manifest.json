@@ -1,16 +1,33 @@
 {
-  "id": "example-third-party-profile",
-  "kind": "lens-profile",
+  "schemaVersion": 1,
+  "id": "org.lumaforge.lens.example-third-party",
+  "kind": "lens-correction-profile",
+  "format": "lcp",
+  "version": "1.0.0",
   "title": "Example Third-Party Lens Profile",
+  "description": "Example only. Replace with real provenance and modification history.",
   "license": "CC-BY-4.0",
   "author": "Original Author Name",
-  "source": "https://example.com/source",
-  "sourceCommit": "abc123",
+  "source": "third-party",
+  "sourceUrl": "https://example.com/source",
   "redistributionAllowed": true,
-  "derivativeOf": "Original profile database name",
-  "copyright": "Copyright Original Author",
-  "notice": "See NOTICE.md",
-  "licenseFile": "LICENSE",
+  "targets": {
+    "lensMakers": ["Example"],
+    "lensModels": ["Example 24-70mm"],
+    "cameraMakers": [],
+    "cameraModels": []
+  },
+  "assets": [
+    {
+      "role": "lens-correction-profile",
+      "path": "assets/example-third-party.lcp",
+      "mediaType": "application/x-lens-correction-profile",
+      "byteSize": 12345,
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  ],
+  "createdAt": "2026-04-28T00:00:00.000Z",
+  "updatedAt": "2026-04-28T00:00:00.000Z",
   "modifications": [
     "Example only. Replace with actual modification history."
   ]

@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "id": "org.lumaforge.profiles",
+  "title": "LumaForge Profiles",
+  "description": "Camera, lens, LUT, and look profiles for the LumaForge RAW pipeline.",
+  "entriesRoot": "profiles",
+  "defaultEntryGlob": "profiles/*/manifest.json",
+  "generatedAt": "2026-04-28T00:00:00.000Z",
+  "entries": []
+}

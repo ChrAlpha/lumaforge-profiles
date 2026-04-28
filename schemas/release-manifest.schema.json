@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LumaForge Profiles Release Manifest",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "id",
+    "tag",
+    "generatedAt",
+    "totalEntries",
+    "entriesByKind",
+    "packs"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "tag": {
+      "type": "string",
+      "minLength": 1
+    },
+    "generatedAt": {
+      "type": "string",
+      "minLength": 1
+    },
+    "totalEntries": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "entriesByKind": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 0
+      }
+    },
+    "packs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "fileName",
+          "mediaType",
+          "byteSize",
+          "sha256",
+          "entryCount",
+          "assetCount",
+          "kindFilter"
+        ],
+        "properties": {
+          "fileName": {
+            "type": "string",
+            "minLength": 1
+          },
+          "mediaType": {
+            "const": "application/zip"
+          },
+          "byteSize": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-fA-F0-9]{64}$"
+          },
+          "entryCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "assetCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "kindFilter": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": true
+}

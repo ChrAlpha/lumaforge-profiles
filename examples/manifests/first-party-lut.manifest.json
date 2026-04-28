@@ -1,19 +1,33 @@
 {
-  "id": "neutral-rec709-v1",
+  "schemaVersion": 1,
+  "id": "org.lumaforge.lut.neutral-rec709",
   "kind": "lut",
-  "title": "Neutral Rec.709 v1",
+  "format": "cube",
+  "version": "1.0.0",
+  "title": "Neutral Rec.709",
+  "description": "Example first-party LUT manifest.",
   "license": "CC0-1.0",
   "author": "LumaForge contributors",
   "source": "original",
+  "sourceUrl": null,
   "redistributionAllowed": true,
-  "derivativeOf": null,
-  "copyright": "Dedicated to the public domain via CC0-1.0",
-  "licenseFile": "LICENSE",
-  "notice": "See NOTICE.md",
-  "files": [
+  "targets": {},
+  "assets": [
     {
-      "path": "neutral-rec709-v1.cube",
-      "role": "lut"
+      "role": "cube-lut",
+      "path": "assets/neutral-rec709.cube",
+      "mediaType": "application/x-cube-lut",
+      "byteSize": 12345,
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
     }
-  ]
+  ],
+  "createdAt": "2026-04-28T00:00:00.000Z",
+  "updatedAt": "2026-04-28T00:00:00.000Z",
+  "lut": {
+    "title": "Neutral Rec.709",
+    "dimension": "3d",
+    "size": 33,
+    "domainMin": [0, 0, 0],
+    "domainMax": [1, 1, 1]
+  }
 }
