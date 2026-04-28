@@ -1,0 +1,34 @@
+{
+  "name": "@lumaforge/profiles",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "profiles": "tsx src/cli.ts",
+    "profiles:import": "tsx src/cli.ts import",
+    "profiles:validate": "tsx src/cli.ts validate",
+    "profiles:index": "tsx src/cli.ts index",
+    "profiles:pack": "tsx src/cli.ts pack",
+    "profiles:release": "tsx src/cli.ts release",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "archiver": "^7.0.1",
+    "commander": "^13.1.0",
+    "execa": "^9.5.2",
+    "fast-glob": "^3.3.3",
+    "fs-extra": "^11.3.0",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/archiver": "^6.0.3",
+    "@types/fs-extra": "^11.0.4",
+    "@types/node": "^22.13.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.5"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
