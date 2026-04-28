@@ -1,35 +1,20 @@
 # Profiles
 
-Each profile asset must live in a dedicated directory with its own manifest and
-any required license or notice files.
-
-Recommended layout:
+Each profile entry lives in one flattened directory under `profiles/`.
 
 ```text
 profiles/
-  luts/
-    <asset-id>/
-      <asset files>
-      manifest.json
-      LICENSE
-      NOTICE.md
-  camera-profiles/
-    <asset-id>/
-      <asset files>
-      manifest.json
-      LICENSE
-      NOTICE.md
-  lens-profiles/
-    <asset-id>/
-      <asset files>
-      manifest.json
-      LICENSE
-      NOTICE.md
+  lut.lumaforge.neutral-rec709.v1/
+    manifest.json
+    assets/
+      neutral-rec709.cube
+    LICENSE
+    NOTICE.md
 ```
 
-The manifest is mandatory. `LICENSE` and `NOTICE.md` are mandatory whenever the
-asset license, attribution terms, provenance, or modification history require
-them.
+The directory name is only storage. Semantics belong in `manifest.json`.
+Loaders should use `profiles/*/manifest.json` or the explicit entries in the
+top-level `lumaforge-profiles.json`.
 
-First-party LumaForge assets should default to CC0-1.0. Third-party assets must
-retain their original license and redistribution terms.
+`assets/` contents are git ignored and are distributed through GitHub Release
+packs. Keep `manifest.json`, `LICENSE`, and `NOTICE.md` trackable.
