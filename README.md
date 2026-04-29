@@ -100,18 +100,21 @@ Camera-log LUTs should carry an explicit render contract:
 }
 ```
 
-ARRI LogC3/LogC4 and Fujifilm F-Log/F-Log2/F-Log2 C LUTs are separate
-contracts, not duplicate assets. The importer uses curated source-package rules
-for known vendor package roots such as `arri/look-library-logc3-to-rec709` and
-`arri/look-library-logc4-log-to-log`. A rule may add the input/output contract
-and append a readable contract suffix to the entry slug so same-name looks do
-not collapse into hash-only collisions.
+Camera-log LUTs with different input curves are separate contracts, not
+duplicate assets. The importer uses curated source-package rules for the
+reviewed local vendor packages currently under `.local-profile-imports/`:
+`arri`, `autel-robotics`, `filmic-pro`, `fujifilm`, `leica`, `nikon`, `red`,
+and `sony`. A rule may add the input/output contract and append a readable
+contract suffix to the entry slug so same-name looks do not collapse into
+hash-only collisions.
 
 The `.cube` parser intentionally does not treat free-form comments as trusted
 contract metadata. If no source-package rule matches, imported LUTs stay
 unresolved until a maintainer edits the manifest or adds a new reviewed source
-rule. Maintainers should still review vendor terms and contract metadata before
-marking an entry redistributable.
+rule. Kinefinity currently stays in that unresolved bucket: `.cube` assets can
+be staged, but `.look` sidecars are ignored and no reviewed contract rule is
+applied yet. Maintainers should still review vendor terms and contract metadata
+before marking an entry redistributable.
 
 If license, author, or redistribution flags are omitted during import, the
 tool writes conservative local-only defaults:
