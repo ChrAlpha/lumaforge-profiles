@@ -31,7 +31,7 @@ do not commit large `.cube`, `.dcp`, or `.lcp` assets.
 By contributing a profile asset or manifest, you certify that:
 
 1. You created the asset yourself, or you have the right to submit it.
-2. The asset may be redistributed through this repository and GitHub Releases.
+2. The asset may be redistributed through this repository and the public R2/CDN distribution path.
 3. The manifest license information is accurate.
 4. The manifest author and source fields identify provenance clearly.
 5. Required attribution, modification notes, and license files are included.
@@ -111,13 +111,13 @@ The release gate rejects entries when:
 - any asset is missing `sha256`
 - any asset hash or byte size differs from the manifest
 - any asset path escapes its entry directory
+- a supported profile format does not have exactly one primary runtime asset
 
-`pnpm profiles:build-release --tag <tag> --repo <owner/name>` runs the release
-gate before creating the release index, per-asset release files, entry manifest
-files, and checksums. `pnpm profiles:pack --tag <tag>` is only a compatibility
-alias for the same single-asset release build; it does not create zip archives.
-Use `pnpm profiles:release:dry-run --tag <tag> --repo <owner/name>` to inspect
-uploads and `pnpm profiles:release --tag <tag> --repo <owner/name>` to execute
+`pnpm profiles:build-r2 --tag <tag> --public-base-url <url>` runs the release
+gate before creating `catalog.json`, `entries/*.json`, `release.json`,
+`blobs-manifest.json`, `publish-plan.json`, and `checksums.txt`.
+Use `pnpm profiles:publish-r2:dry-run --tag <tag> --channel stable` to inspect
+uploads and `pnpm profiles:publish-r2 --tag <tag> --channel stable` to execute
 them.
 
 ## Pull Request Checklist
@@ -131,5 +131,5 @@ them.
 - No large profile asset is committed to Git history.
 - `pnpm test` passes.
 - `pnpm profiles:validate --release` passes for releasable entries.
-- `pnpm profiles:build-release --tag <tag> --repo <owner/name>` produces
-  individual release assets and no default zip archive.
+- `pnpm profiles:build-r2 --tag <tag> --public-base-url <url>` produces the
+  expected `dist/r2-release/<tag>/` artifact set.

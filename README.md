@@ -4,8 +4,8 @@ LumaForge Profiles is a manifest-first registry for LUTs, DNG camera profiles,
 lens correction profiles, and related RAW pipeline profile metadata.
 
 The repository tracks metadata, schemas, documentation, and tooling. Large
-profile assets are kept out of Git history and are distributed as individual
-GitHub Release assets.
+profile assets are kept out of Git history and are distributed through
+Cloudflare R2 with a Cloudflare custom-domain CDN in front.
 
 ## Design
 
@@ -60,20 +60,23 @@ pnpm profiles:validate
 # 4. Regenerate the repository index
 pnpm profiles:index
 
-# 5. Build GitHub Release assets
-pnpm profiles:build-release --tag v2026.04.28 --repo lumaforge/lumaforge-profiles
+# 5. Build R2/CDN release artifacts
+pnpm profiles:build-r2 --tag v2026.04.29 --public-base-url https://profiles.lumaforge.invalid --channel stable
 
-# 6. Dry-run GitHub release commands
-pnpm profiles:release:dry-run --tag v2026.04.28 --repo lumaforge/lumaforge-profiles
+# 6. Dry-run the R2 publish plan
+pnpm profiles:publish-r2:dry-run --tag v2026.04.29 --channel stable
 
-# 7. Publish a draft release
-pnpm profiles:release --tag v2026.04.28 --repo lumaforge/lumaforge-profiles --draft
+# 7. Publish immutable blobs and channel aliases
+pnpm profiles:publish-r2 --tag v2026.04.29 --channel stable
+
+# 8. Inspect or execute garbage collection
+pnpm profiles:r2:gc --keep-releases 3 --dry-run
 ```
 
-The import command recursively scans `.cube`, `.dcp`, and `.lcp` files, copies
-them into `profiles/<entry-dir>/assets/`, and writes or updates each
-`manifest.json`. Existing manifests keep curated metadata by default while
-asset hash, size, and path metadata are refreshed.
+The import command recursively scans `.cube`, `.dcp`, `.icc`, `.lcp`, and
+JSON-based profile files, copies them into `profiles/<entry-dir>/assets/`, and
+writes or updates each `manifest.json`. Existing manifests keep curated
+metadata by default while asset hash, size, and path metadata are refreshed.
 
 For LUTs, import also records parsed `.cube` table metadata under `lut`.
 Camera-log LUTs should carry an explicit render contract:
@@ -124,30 +127,33 @@ tool writes conservative local-only defaults:
 
 These entries are allowed locally but cannot be published as release assets.
 
-## Release Assets
+## R2 Release Artifacts
 
-`pnpm profiles:build-release --tag <tag> --repo <owner/name>` runs release
+`pnpm profiles:build-r2 --tag <tag> --public-base-url <url>` runs release
 validation and writes:
 
 ```text
-dist/release/<tag>/
-  lumaforge-profiles.<tag>.index.json
-  lumaforge-profiles.<tag>.checksums.txt
-  RELEASE_NOTES.md
-  assets/
-    asset.lut.lumaforge.neutral-rec709.v1.cube
-    asset.camera.sony.ilce-7m4.v1.dcp
-    asset.lens.sony.fe-24-70mm-f2-8-gm-ii.v1.lcp
+dist/r2-release/<tag>/
+  catalog.json
+  release.json
+  blobs-manifest.json
+  publish-plan.json
+  checksums.txt
   entries/
-    entry.lut.lumaforge.neutral-rec709.v1.manifest.json
-    entry.camera.sony.ilce-7m4.v1.manifest.json
-    entry.lens.sony.fe-24-70mm-f2-8-gm-ii.v1.manifest.json
+    org.lumaforge.lut.neutral-rec709.json
+    org.lumaforge.camera.sony.ilce-7m4.json
+    org.lumaforge.lens.sony.fe-24-70mm-f2-8-gm-ii.json
 ```
 
-Each file under `assets/` is uploaded as its own GitHub Release asset. The
-release index contains the direct download URL, size, sha256, media type, role,
-and release asset name for every runtime asset. The release command uploads the
-already-built files; it does not repackage them.
+Immutable runtime assets are content-addressed blobs under
+`blobs/sha256/<aa>/<bb>/<sha256>.<ext>`. `catalog.json` is the small runtime
+entry point, `entries/*.json` hold full manifest metadata, and
+`blobs-manifest.json` records the exact blob references used by the release for
+auditing and GC.
+
+`publish-plan.json` lists the release objects, keys, cache headers, and upload
+phases. `checksums.txt` provides local audit hashes for the generated release
+artifacts.
 
 Release validation fails closed for entries with unclear redistribution terms,
 missing authors, missing assets, missing hashes, byte-size mismatches, or hash
@@ -155,24 +161,24 @@ mismatches.
 
 ## Runtime Loading
 
-GitHub Releases are used as an asset store. The Git repository stores
-manifests, schemas, tools, and docs. Large profile binaries should stay out of
-Git history. Each runtime asset is published as an individual GitHub Release
-asset.
+The Git repository stores manifests, schemas, tools, and docs. Cloudflare R2
+stores immutable profile blobs and versioned release indexes. Cloudflare CDN
+serves public profile URLs with aggressive edge caching.
 
 The default runtime contract is:
 
 ```text
-1. LumaForge downloads lumaforge-profiles.<tag>.index.json.
+1. LumaForge downloads channels/stable/catalog.json (or a pinned release catalog).
 2. The UI lists compatible LUT, camera profile, and lens profile entries from
-   the index.
-3. When the user selects one LUT, DCP, or LCP, runtime downloads only that
-   entry asset's download.url.
+   the catalog.
+3. When the user selects one LUT, DCP, ICC, LCP, or JSON-based profile, runtime
+   downloads only that entry's primaryAsset.url.
 4. Runtime verifies sha256 before loading.
 5. Verified bytes are cached in Cache Storage or IndexedDB by sha256.
 6. Later requests for the same sha256 read from local cache.
 7. Runtime does not download a full archive, vendor archive, model archive, or
    mount archive to load one profile.
+8. Runtime does not call R2 management APIs, LIST, or HEAD to discover assets.
 ```
 
 Runtime should filter LUT entries by `lut.inputTransfer` and `lut.inputGamut`
@@ -184,6 +190,35 @@ not as a silent compatibility match.
 
 Bulk archives, if ever generated by a separate offline mirroring workflow, are
 offline-only and are not part of the default runtime path.
+
+## Distribution Strategy
+
+```text
+The Git repository stores manifests, schemas, tools, and docs.
+Cloudflare R2 stores immutable profile blobs and versioned release catalogs.
+Cloudflare CDN serves public profile URLs with aggressive edge caching.
+Content-addressed blobs are reused across releases to reduce storage and write operations.
+Mutable channel files (stable/latest) are small and updated last.
+```
+
+Cache policy defaults:
+
+- `blobs/*` -> `Cache-Control: public, max-age=31536000, immutable`
+- `releases/<tag>/*.json` -> `Cache-Control: public, max-age=86400, immutable`
+- `channels/<name>/*.json` -> `Cache-Control: public, max-age=60, stale-while-revalidate=600`
+
+Because Cloudflare's default file-extension cache list does not naturally cover
+profile formats like `.cube`, `.dcp`, or `.lcp`, production setup should add a
+Cache Rule or equivalent "cache everything" policy for the custom domain.
+
+See [docs/cloudflare-r2-setup.md](docs/cloudflare-r2-setup.md) and
+[.env.example](.env.example) for bucket, custom-domain, CORS, and channel setup.
+
+## Legacy GitHub Path
+
+The older `profiles:build-release` / `profiles:release` GitHub Release path is
+kept as a compatibility fallback. The default runtime and publishing workflow
+should use `build-r2`, `publish-r2`, and `r2-gc`.
 
 ## Compatibility
 

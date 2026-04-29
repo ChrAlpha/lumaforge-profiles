@@ -16,6 +16,6 @@ The directory name is only storage. Semantics belong in `manifest.json`.
 Loaders should use `profiles/*/manifest.json` or the explicit entries in the
 top-level `lumaforge-profiles.json`.
 
-`assets/` contents are git ignored and are distributed through individual
-GitHub Release assets. Keep `manifest.json`, `LICENSE`, and `NOTICE.md`
-trackable.
+`assets/` contents are git ignored and are distributed through Cloudflare R2
+content-addressed blobs and versioned release catalogs. Keep `manifest.json`,
+`LICENSE`, and `NOTICE.md` trackable.
