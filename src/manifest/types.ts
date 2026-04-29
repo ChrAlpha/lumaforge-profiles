@@ -40,6 +40,17 @@ export interface CubeMetadata {
   size?: number;
   domainMin?: [number, number, number];
   domainMax?: [number, number, number];
+  vendor?: string;
+  inputTransfer?: string;
+  inputGamut?: string;
+  outputTransfer?: string;
+  outputGamut?: string;
+  intent?: LUTIntent;
+  family?: string;
+  variant?: string;
+  contractSource?: string;
+  contractSourceId?: string;
+  contractConfidence?: "high" | "medium" | "low" | string;
 }
 
 export interface ProfileManifest {
@@ -66,9 +77,11 @@ export interface ProfileManifest {
 export interface RepositoryEntry {
   id: string;
   kind: ProfileKind;
+  format: ProfileFormat;
   version: string;
   title: string;
   manifest: string;
+  lut?: CubeMetadata;
 }
 
 export interface RepositoryManifest {
@@ -159,3 +172,16 @@ export const ID_KIND_SEGMENT_BY_KIND: Record<ProfileKind, string> = {
   "lens-correction-profile": "lens",
   "color-transform-profile": "color-transform"
 };
+
+export const LUT_INTENTS = [
+  "look",
+  "technical-output",
+  "display-look",
+  "scene-creative",
+  "combined-look-output",
+  "monitoring",
+  "calibration",
+  "unknown"
+] as const;
+
+export type LUTIntent = (typeof LUT_INTENTS)[number];

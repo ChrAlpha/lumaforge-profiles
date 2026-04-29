@@ -1,8 +1,30 @@
 import { z } from "zod";
 
-import { PROFILE_ASSET_ROLES, PROFILE_KINDS } from "./types";
+import { LUT_INTENTS, PROFILE_ASSET_ROLES, PROFILE_KINDS } from "./types";
 
 const sha256Schema = z.string().regex(/^[a-f0-9]{64}$/i);
+const rgbTripleSchema = z.tuple([z.number(), z.number(), z.number()]);
+
+export const lutMetadataSchema = z
+  .object({
+    title: z.string().min(1).optional(),
+    dimension: z.enum(["1d", "3d"]).optional(),
+    size: z.number().int().positive().optional(),
+    domainMin: rgbTripleSchema.optional(),
+    domainMax: rgbTripleSchema.optional(),
+    vendor: z.string().min(1).optional(),
+    inputTransfer: z.string().min(1).optional(),
+    inputGamut: z.string().min(1).optional(),
+    outputTransfer: z.string().min(1).optional(),
+    outputGamut: z.string().min(1).optional(),
+    intent: z.enum(LUT_INTENTS).optional(),
+    family: z.string().min(1).optional(),
+    variant: z.string().min(1).optional(),
+    contractSource: z.string().min(1).optional(),
+    contractSourceId: z.string().min(1).optional(),
+    contractConfidence: z.string().min(1).optional()
+  })
+  .passthrough();
 
 export const profileAssetSchema = z
   .object({
@@ -31,7 +53,8 @@ export const profileEntryManifestSchema = z
     targets: z.record(z.unknown()),
     assets: z.array(profileAssetSchema).min(1),
     createdAt: z.string().min(1),
-    updatedAt: z.string().min(1)
+    updatedAt: z.string().min(1),
+    lut: lutMetadataSchema.optional()
   })
   .passthrough();
 
@@ -48,9 +71,11 @@ export const repositoryManifestSchema = z
       z.object({
         id: z.string().min(1),
         kind: z.enum(PROFILE_KINDS),
+        format: z.string().min(1),
         version: z.string().min(1),
         title: z.string().min(1),
-        manifest: z.string().min(1)
+        manifest: z.string().min(1),
+        lut: lutMetadataSchema.optional()
       })
     )
   })

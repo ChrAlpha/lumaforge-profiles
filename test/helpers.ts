@@ -42,6 +42,7 @@ export interface WriteProfileEntryOptions {
   source?: string;
   sourceUrl?: string | null;
   redistributionAllowed?: boolean;
+  lut?: Record<string, unknown>;
 }
 
 const roleByFormat: Record<string, string> = {
@@ -90,7 +91,8 @@ export async function writeProfileEntry(root: string, options: WriteProfileEntry
       }
     ],
     createdAt: "2026-04-28T00:00:00.000Z",
-    updatedAt: "2026-04-28T00:00:00.000Z"
+    updatedAt: "2026-04-28T00:00:00.000Z",
+    ...(options.lut ? { lut: options.lut } : {})
   };
   await writeFixture(root, `${options.entryDir}/manifest.json`, JSON.stringify(manifest, null, 2));
   return { assetPath, byteSize, sha256, manifest };

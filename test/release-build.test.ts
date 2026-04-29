@@ -14,7 +14,19 @@ describe("single-asset release build", () => {
       entryDir: "profiles/lut.lumaforge.neutral-rec709.v1",
       title: "Neutral Rec.709",
       assetFileName: "neutral-rec709.cube",
-      assetContent: "TITLE \"Neutral Rec.709\"\n"
+      assetContent: "TITLE \"Neutral Rec.709\"\n",
+      lut: {
+        title: "Neutral Rec.709",
+        dimension: "3d",
+        size: 33,
+        inputTransfer: "srgb",
+        inputGamut: "rec709",
+        outputTransfer: "srgb",
+        outputGamut: "rec709",
+        intent: "display-look",
+        family: "lumaforge-examples",
+        variant: "neutral-rec709"
+      }
     });
     const dcp = await writeProfileEntry(root, {
       id: "org.lumaforge.camera.sony.ilce-7m4",
@@ -87,6 +99,13 @@ describe("single-asset release build", () => {
     expect(index.entries.flatMap((entry: any) => entry.assets.map((asset: any) => asset.download.url))).not.toEqual(
       expect.arrayContaining([expect.stringContaining(".zip")])
     );
+    expect(index.entries.find((entry: any) => entry.id === "org.lumaforge.lut.neutral-rec709").lut).toMatchObject({
+      inputTransfer: "srgb",
+      inputGamut: "rec709",
+      outputTransfer: "srgb",
+      outputGamut: "rec709",
+      intent: "display-look"
+    });
 
     const indexedAssets = new Map(
       index.entries.flatMap((entry: any) =>

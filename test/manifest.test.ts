@@ -138,6 +138,45 @@ describe("manifest validation and index", () => {
     ]);
   });
 
+  test("includes LUT contract metadata in the repository index for runtime filtering", async () => {
+    const root = await createTempRepo();
+    await writeManifest(root, "profiles/lut.arri.1110-black-and-white-logc3-rec709.v1", {
+      ...safeManifest,
+      id: "org.arri.lut.1110-black-and-white-logc3-rec709",
+      title: "1110 Black and White LogC3 Rec.709",
+      lut: {
+        title: "1110 Black and White",
+        dimension: "3d",
+        size: 33,
+        inputTransfer: "arri-logc3",
+        inputGamut: "arri-wide-gamut-3",
+        outputTransfer: "srgb",
+        outputGamut: "rec709",
+        intent: "look",
+        family: "arri-look-library",
+        variant: "1110-black-and-white"
+      }
+    });
+
+    const index = await generateRepositoryIndex({ rootDir: root, now: "2026-04-28T00:00:00.000Z" });
+
+    expect(index.entries).toEqual([
+      expect.objectContaining({
+        id: "org.arri.lut.1110-black-and-white-logc3-rec709",
+        kind: "lut",
+        format: "cube",
+        title: "1110 Black and White LogC3 Rec.709",
+        manifest: "profiles/lut.arri.1110-black-and-white-logc3-rec709.v1/manifest.json",
+        lut: expect.objectContaining({
+          inputTransfer: "arri-logc3",
+          inputGamut: "arri-wide-gamut-3",
+          outputTransfer: "srgb",
+          outputGamut: "rec709"
+        })
+      })
+    ]);
+  });
+
   test("rejects asset paths that escape the entry directory", async () => {
     const root = await createTempRepo();
     await writeFixture(root, "outside.cube", "TITLE \"outside\"\n");

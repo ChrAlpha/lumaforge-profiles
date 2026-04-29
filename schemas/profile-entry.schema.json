@@ -135,8 +135,103 @@
     },
     "lut": {
       "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "dimension": {
+          "type": "string",
+          "enum": [
+            "1d",
+            "3d"
+          ]
+        },
+        "size": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "domainMin": {
+          "$ref": "#/$defs/rgbTriple"
+        },
+        "domainMax": {
+          "$ref": "#/$defs/rgbTriple"
+        },
+        "vendor": {
+          "type": "string",
+          "minLength": 1
+        },
+        "inputTransfer": {
+          "type": "string",
+          "minLength": 1
+        },
+        "inputGamut": {
+          "type": "string",
+          "minLength": 1
+        },
+        "outputTransfer": {
+          "type": "string",
+          "minLength": 1
+        },
+        "outputGamut": {
+          "type": "string",
+          "minLength": 1
+        },
+        "intent": {
+          "type": "string",
+          "enum": [
+            "look",
+            "technical-output",
+            "display-look",
+            "scene-creative",
+            "combined-look-output",
+            "monitoring",
+            "calibration",
+            "unknown"
+          ]
+        },
+        "family": {
+          "type": "string",
+          "minLength": 1
+        },
+        "variant": {
+          "type": "string",
+          "minLength": 1
+        },
+        "contractSource": {
+          "type": "string",
+          "minLength": 1
+        },
+        "contractSourceId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "contractConfidence": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
       "additionalProperties": true
     }
   },
-  "additionalProperties": true
+  "additionalProperties": true,
+  "$defs": {
+    "rgbTriple": {
+      "type": "array",
+      "prefixItems": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        }
+      ],
+      "items": false,
+      "minItems": 3,
+      "maxItems": 3
+    }
+  }
 }

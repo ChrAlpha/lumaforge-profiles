@@ -50,6 +50,15 @@ function isValidProfileVersion(version: string) {
   return /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(version);
 }
 
+function missingLutContractFields(manifest: ProfileManifest) {
+  const contractFields = ["inputTransfer", "inputGamut", "outputTransfer", "outputGamut"] as const;
+  const present = contractFields.filter((field) => Boolean(manifest.lut?.[field]));
+  if (present.length === 0 || present.length === contractFields.length) {
+    return [];
+  }
+  return contractFields.filter((field) => !manifest.lut?.[field]);
+}
+
 export function formatValidationIssue(validationIssue: ValidationIssue) {
   const where = [validationIssue.entryId, validationIssue.manifestPath, validationIssue.field].filter(Boolean).join(" ");
   return `[${validationIssue.code}]${where ? ` ${where}` : ""}: ${validationIssue.message}`;
@@ -112,6 +121,19 @@ export async function validateProfiles(options: ValidateProfilesOptions): Promis
           manifestPath,
           manifest.id,
           "format"
+        )
+      );
+    }
+
+    const missingContractFields = missingLutContractFields(manifest);
+    if (missingContractFields.length > 0) {
+      result.errors.push(
+        issue(
+          "lut-contract",
+          `LUT contract fields must be complete when any input/output contract field is present; missing ${missingContractFields.join(", ")}.`,
+          manifestPath,
+          manifest.id,
+          "lut"
         )
       );
     }

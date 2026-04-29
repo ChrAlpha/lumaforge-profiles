@@ -51,9 +51,11 @@ export async function generateRepositoryIndex(options: GenerateRepositoryIndexOp
     entries.push({
       id: manifest.id,
       kind: manifest.kind,
+      format: manifest.format,
       version: manifest.version,
       title: manifest.title,
-      manifest: manifestPath
+      manifest: manifestPath,
+      ...(manifest.lut ? { lut: manifest.lut } : {})
     });
   }
 
