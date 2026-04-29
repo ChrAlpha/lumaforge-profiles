@@ -6,6 +6,11 @@ import {
   entryDirectoryName,
   entryId
 } from "./normalize";
+import {
+  DEFAULT_ACES_LUT_SIZE,
+  canMigrateCubeToAcescctAp1,
+  migrateCubeToAcescctAp1
+} from "./aces-migration";
 import { defaultTitleForProfile, inferTargets, parseCubeMetadata } from "./classify";
 import { inferLutContract, slugWithLutContract } from "./lut-contract";
 import { scanImportDirectory } from "./scan";
@@ -14,7 +19,7 @@ import { generateRepositoryIndex } from "../manifest";
 import { validateProfiles, type ValidationResult } from "../manifest/validate";
 import type { CubeMetadata, ProfileManifest } from "../manifest/types";
 import { fileByteSize, fs, readJsonIfExists, toPosixPath, writeJsonFile } from "../utils/fs";
-import { sha256File } from "../utils/hash";
+import { sha256File, sha256Text } from "../utils/hash";
 import { sanitizeFileName, slugify } from "../utils/slug";
 import { nowIso } from "../utils/time";
 
@@ -32,6 +37,8 @@ export interface ImportProfilesOptions {
   move?: boolean;
   overwriteAssets?: boolean;
   keepExistingMetadata?: boolean;
+  migrateLutsToAcescctAp1?: boolean;
+  canonicalLutSize?: number;
   now?: string;
 }
 
@@ -42,6 +49,11 @@ export interface ImportWrittenEntry {
   assetPath: string;
   id: string;
   action: "create" | "update";
+  migration?: {
+    mode: "acescct-ap1";
+    action: "migrated" | "skipped";
+    reason?: string;
+  };
 }
 
 export interface ImportProfilesResult {
@@ -149,6 +161,17 @@ function mergeLutMetadata(existing: CubeMetadata | undefined, next: CubeMetadata
   };
 }
 
+function canonicalAcesAssetFileName(originalFileName: string, gridSize: number) {
+  const safe = sanitizeFileName(originalFileName);
+  const extension = path.extname(safe);
+  const stem = path.basename(safe, extension);
+  return `${stem}.acescct-ap1.${gridSize}.cube`;
+}
+
+function appendAcesSlug(slug: string, gridSize: number) {
+  return `${slug}-acescct-ap1-${gridSize}`;
+}
+
 export async function importProfiles(options: ImportProfilesOptions): Promise<ImportProfilesResult> {
   const version = options.version ?? "1.0.0";
   const timestamp = options.now ?? nowIso();
@@ -158,8 +181,8 @@ export async function importProfiles(options: ImportProfilesOptions): Promise<Im
   const written: ImportWrittenEntry[] = [];
 
   for (const item of scanned) {
-    const hash = await sha256File(item.absolutePath);
-    const byteSize = await fileByteSize(item.absolutePath);
+    const originalHash = await sha256File(item.absolutePath);
+    const originalByteSize = await fileByteSize(item.absolutePath);
     const parsedCubeMetadata = item.classification.format === "cube" ? await parseCubeMetadata(item.absolutePath) : undefined;
     const title = parsedCubeMetadata?.title ?? defaultTitleForProfile(item.absolutePath);
     const sourcePackageContract = item.classification.format === "cube" ? inferSourcePackageLutContract(item.relativePath) : undefined;
@@ -170,14 +193,60 @@ export async function importProfiles(options: ImportProfilesOptions): Promise<Im
           ...(sourcePackageContract ?? {})
         })
       : undefined;
-    const cubeMetadata = parsedCubeMetadata || lutContract
+    let cubeMetadata = parsedCubeMetadata || lutContract
       ? {
           ...(parsedCubeMetadata ?? {}),
           ...(lutContract ?? {})
         }
       : undefined;
     const baseSlug = slugify(path.basename(item.absolutePath, path.extname(item.absolutePath)));
-    const slug = slugWithLutContract(baseSlug, lutContract);
+    let slug = slugWithLutContract(baseSlug, lutContract);
+    let hash = originalHash;
+    let byteSize = originalByteSize;
+    let desiredFileName = sanitizeFileName(path.basename(item.absolutePath));
+    let assetText: string | undefined;
+    let migration: ImportWrittenEntry["migration"];
+
+    if (options.migrateLutsToAcescctAp1 && item.classification.format === "cube") {
+      const gridSize = options.canonicalLutSize ?? DEFAULT_ACES_LUT_SIZE;
+      const support = canMigrateCubeToAcescctAp1(lutContract ?? {});
+      if (!support.supported) {
+        migration = {
+          mode: "acescct-ap1",
+          action: "skipped",
+          reason: support.reason
+        };
+      } else {
+        try {
+          const migrated = await migrateCubeToAcescctAp1({
+            sourcePath: item.absolutePath,
+            title,
+            sourceContract: lutContract ?? {},
+            gridSize
+          });
+          assetText = migrated.cubeText;
+          hash = sha256Text(assetText);
+          byteSize = Buffer.byteLength(assetText);
+          desiredFileName = canonicalAcesAssetFileName(path.basename(item.absolutePath), gridSize);
+          slug = appendAcesSlug(slug, gridSize);
+          cubeMetadata = {
+            ...(cubeMetadata ?? {}),
+            ...migrated.metadata
+          };
+          migration = {
+            mode: "acescct-ap1",
+            action: "migrated"
+          };
+        } catch (error) {
+          migration = {
+            mode: "acescct-ap1",
+            action: "skipped",
+            reason: error instanceof Error ? error.message : "Unable to migrate LUT."
+          };
+        }
+      }
+    }
+
     const chosenEntry = await chooseEntryDir({
       rootDir: options.rootDir,
       namespace: options.namespace,
@@ -189,7 +258,6 @@ export async function importProfiles(options: ImportProfilesOptions): Promise<Im
     });
     const relativeEntryDir = chosenEntry.relativeEntryDir;
     const fullEntryDir = path.join(options.rootDir, relativeEntryDir);
-    const desiredFileName = sanitizeFileName(path.basename(item.absolutePath));
     const assetFileName = await chooseAssetFileName({
       entryFullPath: fullEntryDir,
       desiredFileName,
@@ -237,7 +305,8 @@ export async function importProfiles(options: ImportProfilesOptions): Promise<Im
       manifestPath: toPosixPath(path.relative(options.rootDir, manifestPath)),
       assetPath: toPosixPath(path.relative(options.rootDir, assetPath)),
       id: manifest.id,
-      action: existing ? "update" : "create"
+      action: existing ? "update" : "create",
+      ...(migration ? { migration } : {})
     });
 
     if (options.dryRun) {
@@ -245,7 +314,9 @@ export async function importProfiles(options: ImportProfilesOptions): Promise<Im
     }
 
     await fs.ensureDir(path.dirname(assetPath));
-    if (options.move) {
+    if (assetText !== undefined) {
+      await fs.writeFile(assetPath, assetText);
+    } else if (options.move) {
       await fs.move(item.absolutePath, assetPath, { overwrite: options.overwriteAssets ?? false });
     } else {
       await fs.copy(item.absolutePath, assetPath, { overwrite: options.overwriteAssets ?? false });

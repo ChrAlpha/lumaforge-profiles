@@ -22,7 +22,14 @@ export const lutMetadataSchema = z
     variant: z.string().min(1).optional(),
     contractSource: z.string().min(1).optional(),
     contractSourceId: z.string().min(1).optional(),
-    contractConfidence: z.string().min(1).optional()
+    contractConfidence: z.string().min(1).optional(),
+    sourceInputTransfer: z.string().min(1).optional(),
+    sourceInputGamut: z.string().min(1).optional(),
+    sourceOutputTransfer: z.string().min(1).optional(),
+    sourceOutputGamut: z.string().min(1).optional(),
+    sourceLutSize: z.number().int().positive().optional(),
+    sourceContractSource: z.string().min(1).optional(),
+    sourceContractSourceId: z.string().min(1).optional()
   })
   .passthrough();
 

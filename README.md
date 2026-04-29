@@ -52,7 +52,8 @@ pnpm profiles:import \
   --namespace lumaforge \
   --author "LumaForge contributors" \
   --license CC0-1.0 \
-  --redistribution-allowed
+  --redistribution-allowed \
+  --migrate-luts-to-acescct-ap1
 
 # 3. Validate manifests and local assets
 pnpm profiles:validate
@@ -115,6 +116,16 @@ rule. Kinefinity currently stays in that unresolved bucket: `.cube` assets can
 be staged, but `.look` sidecars are ignored and no reviewed contract rule is
 applied yet. Maintainers should still review vendor terms and contract metadata
 before marking an entry redistributable.
+
+When `--migrate-luts-to-acescct-ap1` is enabled, supported imported `.cube`
+LUTs with complete reviewed input/output contracts are baked into canonical
+ACES AP1 / ACEScct `65^3` assets. The generated manifest changes the LUT input
+contract to `inputGamut: "aces-ap1"` and `inputTransfer: "acescct"`, preserves
+the declared output contract, and records the source input/output contract under
+`source*` metadata fields. LUTs without a complete trusted contract, with an
+unsupported input transfer/gamut, or with invalid cube data are left as ordinary
+imports and reported as skipped by the CLI. This migration does not change the
+license or redistribution flags; unclear third-party assets remain local-only.
 
 If license, author, or redistribution flags are omitted during import, the
 tool writes conservative local-only defaults:

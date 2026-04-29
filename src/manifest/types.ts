@@ -58,6 +58,13 @@ export interface CubeMetadata {
   contractSource?: string;
   contractSourceId?: string;
   contractConfidence?: "high" | "medium" | "low" | string;
+  sourceInputTransfer?: string;
+  sourceInputGamut?: string;
+  sourceOutputTransfer?: string;
+  sourceOutputGamut?: string;
+  sourceLutSize?: number;
+  sourceContractSource?: string;
+  sourceContractSourceId?: string;
 }
 
 export interface ProfileManifest {

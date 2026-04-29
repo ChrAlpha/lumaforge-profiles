@@ -9,6 +9,25 @@ import { slugify } from "../src/utils/slug";
 import { createTempRepo, readJson, writeFixture } from "./helpers";
 
 describe("profile import", () => {
+  function identityCube(size: number) {
+    const lines = [
+      'TITLE "Identity"',
+      `LUT_3D_SIZE ${size}`,
+      "DOMAIN_MIN 0 0 0",
+      "DOMAIN_MAX 1 1 1",
+      "",
+    ];
+    const max = size - 1;
+    for (let b = 0; b < size; b += 1) {
+      for (let g = 0; g < size; g += 1) {
+        for (let r = 0; r < size; r += 1) {
+          lines.push(`${r / max} ${g / max} ${b / max}`);
+        }
+      }
+    }
+    return `${lines.join("\n")}\n`;
+  }
+
   test("recursively scans complex import trees and classifies supported assets", async () => {
     const root = await createTempRepo();
     await writeFixture(
@@ -328,6 +347,65 @@ describe("profile import", () => {
       contractSource: "source-package-rule",
       contractSourceId: "fujifilm-f-log2c-to-eterna",
       contractConfidence: "high",
+    });
+  });
+
+  test("can migrate imported LUT assets to an ACEScct/AP1 canonical grid", async () => {
+    const root = await createTempRepo();
+    await writeFixture(
+      root,
+      "imports/arri/look-library-logc3-to-rec709/ARRI Look Library LogC3 to Rec709 3D-LUTs/1110-Black-and-White.cube",
+      identityCube(2),
+    );
+
+    const result = await importProfiles({
+      rootDir: root,
+      fromDir: path.join(root, "imports/arri"),
+      namespace: "arri",
+      author: "ARRI",
+      license: "NOASSERTION",
+      redistributionAllowed: false,
+      migrateLutsToAcescctAp1: true,
+      canonicalLutSize: 3,
+      now: "2026-04-28T00:00:00.000Z",
+    });
+
+    const entry = result.written[0]!;
+    expect(entry.assetPath).toBe(
+      "profiles/lut.arri.1110-black-and-white-logc3-rec709-acescct-ap1-3.v1/assets/1110-black-and-white.acescct-ap1.3.cube",
+    );
+
+    const manifest = await readJson<any>(
+      root,
+      `${entry.entryDir}/manifest.json`,
+    );
+    const migratedAssetPath = path.join(root, entry.assetPath);
+    const migratedText = await fs.readFile(migratedAssetPath, "utf8");
+
+    expect(migratedText).toContain("LUT_3D_SIZE 3");
+    expect(manifest).toMatchObject({
+      id: "org.arri.lut.1110-black-and-white-logc3-rec709-acescct-ap1-3",
+      kind: "lut",
+      format: "cube",
+      title: "Identity",
+      lut: {
+        dimension: "3d",
+        size: 3,
+        inputTransfer: "acescct",
+        inputGamut: "aces-ap1",
+        outputTransfer: "srgb",
+        outputGamut: "rec709",
+        contractSource: "acescct-ap1-migration",
+        sourceInputTransfer: "arri-logc3",
+        sourceInputGamut: "arri-wide-gamut-3",
+        sourceContractSourceId: "arri-look-library-logc3-to-rec709",
+      },
+    });
+    expect(manifest.assets[0]).toMatchObject({
+      role: "cube-lut",
+      path: "assets/1110-black-and-white.acescct-ap1.3.cube",
+      byteSize: Buffer.byteLength(migratedText),
+      sha256: await sha256File(migratedAssetPath),
     });
   });
 

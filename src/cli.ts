@@ -50,6 +50,17 @@ program
   .option("--move", "move source assets instead of copying", false)
   .option("--overwrite-assets", "overwrite existing asset files", false)
   .option(
+    "--migrate-luts-to-acescct-ap1",
+    "convert supported imported .cube LUTs to ACEScct / ACES AP1 input",
+    false,
+  )
+  .option(
+    "--canonical-lut-size <size>",
+    "grid size for migrated ACEScct / ACES AP1 LUTs",
+    (value) => Number(value),
+    65,
+  )
+  .option(
     "--no-keep-existing-metadata",
     "replace curated fields in existing manifests",
   )
@@ -68,11 +79,16 @@ program
       move: options.move,
       overwriteAssets: options.overwriteAssets,
       keepExistingMetadata: options.keepExistingMetadata,
+      migrateLutsToAcescctAp1: options.migrateLutsToAcescctAp1,
+      canonicalLutSize: options.canonicalLutSize,
     });
 
     for (const entry of result.written) {
+      const migration = entry.migration
+        ? ` [${entry.migration.mode}:${entry.migration.action}${entry.migration.reason ? `:${entry.migration.reason}` : ""}]`
+        : "";
       console.log(
-        `${entry.action}: ${entry.sourcePath} -> ${entry.manifestPath}`,
+        `${entry.action}: ${entry.sourcePath} -> ${entry.manifestPath}${migration}`,
       );
     }
     console.log(
