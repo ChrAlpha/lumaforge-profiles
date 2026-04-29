@@ -6,6 +6,9 @@ type Mat3 = [number, number, number, number, number, number, number, number, num
 
 const TARGET_INPUT_TRANSFER = "acescct";
 const TARGET_INPUT_GAMUT = "aces-ap1";
+const TARGET_OUTPUT_TRANSFER = "srgb";
+const TARGET_OUTPUT_GAMUT = "rec709";
+const TARGET_OUTPUT_GAMUT_MATRIX_ID = "srgb-rec709";
 export const DEFAULT_ACES_LUT_SIZE = 65;
 
 interface ParsedCube3d {
@@ -518,13 +521,48 @@ function srgbEncode(linear: number) {
   return 1.055 * linear ** (1 / 2.4) - 0.055;
 }
 
+function srgbDecode(encoded: number) {
+  if (encoded <= 0.04045) {
+    return encoded / 12.92;
+  }
+  return ((encoded + 0.055) / 1.055) ** 2.4;
+}
+
 function bt709Encode(linear: number) {
   const clamped = Math.max(linear, 0);
   return clamped <= 0.018 ? 4.5 * clamped : 1.099 * clamped ** 0.45 - 0.099;
 }
 
+function bt709Decode(encoded: number) {
+  const clamped = Math.max(encoded, 0);
+  return clamped <= 0.081 ? clamped / 4.5 : ((clamped + 0.099) / 1.099) ** (1 / 0.45);
+}
+
 function gamma24Encode(linear: number) {
   return Math.max(linear, 0) ** (1 / 2.4);
+}
+
+function gamma24Decode(encoded: number) {
+  return Math.max(encoded, 0) ** 2.4;
+}
+
+function logC3Decode(encoded: number) {
+  const cut = 0.1496;
+  const a = 5.555556;
+  const b = 0.052272;
+  const c = 0.24719;
+  const d = 0.385537;
+  const e = 5.367655;
+  const f = 0.092809;
+  return encoded > cut ? (10 ** ((encoded - d) / c) - b) / a : (encoded - f) / e;
+}
+
+function logC4Decode(encoded: number) {
+  if (encoded < 0) {
+    return encoded * LOG_C4_S + LOG_C4_T;
+  }
+  const p = (14 * (encoded - LOG_C4_C)) / LOG_C4_B + 6;
+  return (2 ** p - 64) / LOG_C4_A;
 }
 
 const TRANSFER_ENCODERS: Record<string, (linear: number) => number> = {
@@ -558,11 +596,33 @@ const TRANSFER_ENCODERS: Record<string, (linear: number) => number> = {
   linear: (linear) => linear,
 };
 
+const TRANSFER_DECODERS: Record<string, (encoded: number) => number> = {
+  acescct: acescctDecode,
+  "arri-logc3": logC3Decode,
+  logc3: logC3Decode,
+  "arri-logc4": logC4Decode,
+  logc4: logC4Decode,
+  srgb: srgbDecode,
+  bt709: bt709Decode,
+  rec709: bt709Decode,
+  bt1886: gamma24Decode,
+  "gamma-2-4": gamma24Decode,
+  gamma24: gamma24Decode,
+  linear: (encoded) => encoded,
+};
+
 function resolveTransferEncoder(value: string | undefined) {
   if (!value) {
     return undefined;
   }
   return TRANSFER_ENCODERS[normalizeId(value)];
+}
+
+function resolveTransferDecoder(value: string | undefined) {
+  if (!value) {
+    return undefined;
+  }
+  return TRANSFER_DECODERS[normalizeId(value)];
 }
 
 function formatNumber(value: number) {
@@ -591,6 +651,12 @@ export function canMigrateCubeToAcescctAp1(contract: Partial<CubeMetadata>): Lut
   if (!resolveGamutId(contract.inputGamut)) {
     return { supported: false, reason: `unsupported input gamut ${contract.inputGamut}` };
   }
+  if (!resolveTransferDecoder(contract.outputTransfer)) {
+    return { supported: false, reason: `unsupported output transfer ${contract.outputTransfer}` };
+  }
+  if (!resolveGamutId(contract.outputGamut)) {
+    return { supported: false, reason: `unsupported output gamut ${contract.outputGamut}` };
+  }
   return { supported: true };
 }
 
@@ -606,7 +672,9 @@ export async function migrateCubeToAcescctAp1(options: AcescctAp1MigrationOption
 
   const sourceCube = await parseCube3d(options.sourcePath);
   const sourceEncode = resolveTransferEncoder(options.sourceContract.inputTransfer)!;
+  const sourceOutputDecode = resolveTransferDecoder(options.sourceContract.outputTransfer)!;
   const inputMatrix = getGamutMatrix(TARGET_INPUT_GAMUT, options.sourceContract.inputGamut!);
+  const outputMatrix = getGamutMatrix(options.sourceContract.outputGamut!, TARGET_OUTPUT_GAMUT_MATRIX_ID);
   const max = gridSize - 1;
   const migratedTitle = `${options.title} (ACEScct AP1 ${gridSize})`;
   const lines = [
@@ -637,8 +705,19 @@ export async function migrateCubeToAcescctAp1(options: AcescctAp1MigrationOption
           sourceEncode(sourceLinear[1]),
           sourceEncode(sourceLinear[2]),
         ];
-        const output = sampleCube(sourceCube, sourceEncoded);
-        lines.push(output.map(formatNumber).join(" "));
+        const sourceOutputEncoded = sampleCube(sourceCube, sourceEncoded);
+        const sourceOutputLinear: Rgb = [
+          sourceOutputDecode(sourceOutputEncoded[0]),
+          sourceOutputDecode(sourceOutputEncoded[1]),
+          sourceOutputDecode(sourceOutputEncoded[2]),
+        ];
+        const targetOutputLinear = applyMatrix(outputMatrix, sourceOutputLinear);
+        const targetOutputEncoded: Rgb = [
+          srgbEncode(targetOutputLinear[0]),
+          srgbEncode(targetOutputLinear[1]),
+          srgbEncode(targetOutputLinear[2]),
+        ];
+        lines.push(targetOutputEncoded.map(formatNumber).join(" "));
       }
     }
   }
@@ -652,8 +731,8 @@ export async function migrateCubeToAcescctAp1(options: AcescctAp1MigrationOption
     vendor: options.sourceContract.vendor,
     inputTransfer: TARGET_INPUT_TRANSFER,
     inputGamut: TARGET_INPUT_GAMUT,
-    outputTransfer: options.sourceContract.outputTransfer,
-    outputGamut: options.sourceContract.outputGamut,
+    outputTransfer: TARGET_OUTPUT_TRANSFER,
+    outputGamut: TARGET_OUTPUT_GAMUT,
     intent: options.sourceContract.intent,
     family: options.sourceContract.family,
     variant: options.sourceContract.variant,

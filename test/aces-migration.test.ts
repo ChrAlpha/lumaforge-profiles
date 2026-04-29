@@ -28,8 +28,15 @@ function cubeDataRows(cubeText: string) {
     .map((line) => line.split(/\s+/).map(Number));
 }
 
+function srgbEncode(linear: number) {
+  if (linear <= 0.0031308) {
+    return 12.92 * linear;
+  }
+  return 1.055 * linear ** (1 / 2.4) - 0.055;
+}
+
 describe("ACEScct/AP1 LUT migration", () => {
-  test("bakes a source cube into an ACEScct/AP1 grid while preserving output contract", async () => {
+  test("bakes a source cube into an ACEScct/AP1 grid while recording the source contract", async () => {
     const root = await createTempRepo();
     const sourcePath = await writeFixture(
       root,
@@ -72,6 +79,43 @@ describe("ACEScct/AP1 LUT migration", () => {
     expect(rows).toHaveLength(27);
     expect(rows[0]).toEqual([0, 0, 0]);
     expect(rows[1]![0]).toBeCloseTo(0.5, 8);
+    expect(rows[1]![1]).toBeCloseTo(0, 8);
+    expect(rows[1]![2]).toBeCloseTo(0, 8);
+  });
+
+  test("normalizes migrated LUT output to sRGB Rec.709", async () => {
+    const root = await createTempRepo();
+    const sourcePath = await writeFixture(
+      root,
+      "imports/bt1886-output.cube",
+      identityCube(2),
+    );
+
+    const migrated = await migrateCubeToAcescctAp1({
+      sourcePath,
+      title: "BT1886 Output",
+      gridSize: 3,
+      sourceContract: {
+        inputTransfer: "acescct",
+        inputGamut: "aces-ap1",
+        outputTransfer: "bt1886",
+        outputGamut: "rec709",
+        contractSource: "source-package-rule",
+        contractSourceId: "fixture-bt1886",
+      },
+    });
+
+    expect(migrated.metadata).toMatchObject({
+      inputTransfer: "acescct",
+      inputGamut: "aces-ap1",
+      outputTransfer: "srgb",
+      outputGamut: "rec709",
+      sourceOutputTransfer: "bt1886",
+      sourceOutputGamut: "rec709",
+    });
+
+    const rows = cubeDataRows(migrated.cubeText);
+    expect(rows[1]![0]).toBeCloseTo(srgbEncode(0.5 ** 2.4), 8);
     expect(rows[1]![1]).toBeCloseTo(0, 8);
     expect(rows[1]![2]).toBeCloseTo(0, 8);
   });

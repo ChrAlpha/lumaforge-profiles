@@ -120,12 +120,13 @@ before marking an entry redistributable.
 When `--migrate-luts-to-acescct-ap1` is enabled, supported imported `.cube`
 LUTs with complete reviewed input/output contracts are baked into canonical
 ACES AP1 / ACEScct `65^3` assets. The generated manifest changes the LUT input
-contract to `inputGamut: "aces-ap1"` and `inputTransfer: "acescct"`, preserves
-the declared output contract, and records the source input/output contract under
-`source*` metadata fields. LUTs without a complete trusted contract, with an
-unsupported input transfer/gamut, or with invalid cube data are left as ordinary
-imports and reported as skipped by the CLI. This migration does not change the
-license or redistribution flags; unclear third-party assets remain local-only.
+contract to `inputGamut: "aces-ap1"` and `inputTransfer: "acescct"`, bakes the
+source LUT output into `outputGamut: "rec709"` and `outputTransfer: "srgb"`, and
+records the source input/output contract under `source*` metadata fields. LUTs
+without a complete trusted contract, with an unsupported transfer/gamut, or with
+invalid cube data are left as ordinary imports and reported as skipped by the
+CLI. This migration does not change the license or redistribution flags; unclear
+third-party assets remain local-only.
 
 If license, author, or redistribution flags are omitted during import, the
 tool writes conservative local-only defaults:
