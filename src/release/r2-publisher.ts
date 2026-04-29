@@ -6,6 +6,7 @@ import {
 } from "./r2-shared";
 import type { ObjectStore } from "./object-store";
 import type { ProfilesPublisher } from "./publisher";
+import { loadPublishedR2ChannelPointer } from "./r2-registry";
 
 export interface R2PublishOptions {
   build: BuildR2ReleaseResult;
@@ -23,6 +24,11 @@ export interface R2PublishPlan {
   publicBaseUrl: string;
   dryRun: boolean;
   objects: R2PublishPlanObject[];
+  channelUpdates: Array<{
+    channel: string;
+    previousTag: string | null;
+    nextTag: string;
+  }>;
   estimatedClassAOperations: number;
   estimatedClassBOperations: number;
 }
@@ -35,7 +41,7 @@ export interface R2PublishResult extends R2PublishPlan {
 export interface R2PublisherOptions {
   bucket: string;
   publicBaseUrl: string;
-  store: Pick<ObjectStore, "headObject" | "putObject">;
+  store: Pick<ObjectStore, "headObject" | "putObject" | "getJson">;
 }
 
 export class R2Publisher implements ProfilesPublisher<
@@ -45,15 +51,18 @@ export class R2Publisher implements ProfilesPublisher<
 > {
   constructor(private readonly options: R2PublisherOptions) {}
 
-  private channelObjects(
-    build: BuildR2ReleaseResult,
-    channelNames: string[],
-  ): R2ReleaseObject[] {
+  private channelObjects(build: BuildR2ReleaseResult, channelNames: string[]) {
     const uniqueChannels = [
       ...new Set(channelNames.map((value) => value.trim()).filter(Boolean)),
     ];
     const objects: R2ReleaseObject[] = [];
-    for (const channel of uniqueChannels) {
+    const updates = uniqueChannels.map((channel) => ({
+      channel,
+      previousTag: null as string | null,
+      nextTag: build.release.tag,
+    }));
+    for (const update of updates) {
+      const channel = update.channel;
       const catalogKey = `channels/${channel}/catalog.json`;
       const releaseKey = `channels/${channel}/release.json`;
       objects.push(
@@ -85,18 +94,28 @@ export class R2Publisher implements ProfilesPublisher<
         },
       );
     }
-    return objects;
+    return {
+      objects,
+      updates,
+    };
   }
 
   async plan(options: R2PublishOptions): Promise<R2PublishPlan> {
-    const channelObjects = this.channelObjects(
+    const channelState = this.channelObjects(
       options.build,
       options.channelNames ?? [],
     );
     const objects: R2PublishPlanObject[] = [];
     let classBOperations = 0;
+    for (const update of channelState.updates) {
+      const current = await loadPublishedR2ChannelPointer(this.options.store, {
+        channel: update.channel,
+      });
+      update.previousTag = current?.tag ?? null;
+      classBOperations += 1;
+    }
 
-    for (const object of [...options.build.objects, ...channelObjects]) {
+    for (const object of [...options.build.objects, ...channelState.objects]) {
       if (object.phase === "blob") {
         classBOperations += 1;
         const exists = await this.options.store.headObject(object.key);
@@ -119,6 +138,7 @@ export class R2Publisher implements ProfilesPublisher<
       publicBaseUrl: this.options.publicBaseUrl,
       dryRun: options.dryRun ?? true,
       objects,
+      channelUpdates: channelState.updates,
       estimatedClassAOperations: objects.filter(
         (object) => object.action !== "skip",
       ).length,

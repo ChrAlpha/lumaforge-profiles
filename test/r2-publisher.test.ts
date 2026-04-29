@@ -10,11 +10,13 @@ function createMemoryStore(existingKeys: string[] = []) {
     contentType?: string;
   }> = [];
   const heads: string[] = [];
+  const jsonObjects = new Map<string, unknown>();
 
   return {
     existing,
     puts,
     heads,
+    jsonObjects,
     async headObject(key: string) {
       heads.push(key);
       return existing.has(key);
@@ -26,6 +28,9 @@ function createMemoryStore(existingKeys: string[] = []) {
     }) {
       puts.push(input);
       existing.add(input.key);
+    },
+    async getJson<T>(key: string) {
+      return (jsonObjects.get(key) as T | undefined) ?? null;
     },
   };
 }
@@ -87,7 +92,14 @@ describe("R2 publisher", () => {
       action: "update",
       cacheControl: "public, max-age=60, stale-while-revalidate=600",
     });
-    expect(plan.estimatedClassBOperations).toBe(build.blobs.length);
+    expect(plan.channelUpdates).toEqual([
+      {
+        channel: "stable",
+        previousTag: null,
+        nextTag: "v2026.04.29",
+      },
+    ]);
+    expect(plan.estimatedClassBOperations).toBe(build.blobs.length + 1);
     expect(plan.objects.slice(-2).map((object) => object.key)).toEqual([
       "channels/stable/catalog.json",
       "channels/stable/release.json",
@@ -115,6 +127,9 @@ describe("R2 publisher", () => {
       now: "2026-04-29T00:00:00.000Z",
     });
     const store = createMemoryStore();
+    store.jsonObjects.set("channels/stable/release.json", {
+      tag: "v2026.04.28",
+    });
     const publisher = new R2Publisher({
       bucket: "lumaforge-profiles",
       publicBaseUrl: "https://profiles.lumaforge.invalid",
@@ -128,6 +143,13 @@ describe("R2 publisher", () => {
     });
     expect(dryRun.dryRun).toBe(true);
     expect(store.puts).toEqual([]);
+    expect(dryRun.channelUpdates).toEqual([
+      {
+        channel: "stable",
+        previousTag: "v2026.04.28",
+        nextTag: "v2026.04.29",
+      },
+    ]);
 
     const published = await publisher.publish({
       build,

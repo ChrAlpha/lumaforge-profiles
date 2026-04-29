@@ -193,6 +193,11 @@ program
     console.log(`skipped blobs: ${result.skippedBlobCount}`);
     console.log(`estimated Class A ops: ${result.estimatedClassAOperations}`);
     console.log(`estimated Class B ops: ${result.estimatedClassBOperations}`);
+    for (const update of result.channelUpdates) {
+      console.log(
+        `channel\t${update.channel}\t${update.previousTag ?? "(none)"} -> ${update.nextTag}`,
+      );
+    }
     for (const object of result.objects) {
       console.log(`${object.action}\t${object.phase}\t${object.key}`);
     }
