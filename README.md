@@ -161,9 +161,13 @@ mismatches.
 
 ## Runtime Loading
 
-The Git repository stores manifests, schemas, tools, and docs. Cloudflare R2
-stores immutable profile blobs and versioned release indexes. Cloudflare CDN
-serves public profile URLs with aggressive edge caching.
+In the legacy GitHub Release model, profiles were effectively maintained
+through the repository and its release attachments. In the R2/S3 model, the
+published profile registry is also maintained through the bucket itself:
+versioned catalogs, channel pointers, and immutable blobs live there, while the
+Git repository remains the authoring and tooling surface for manifests,
+schemas, docs, and release workflows. Cloudflare CDN then serves those bucket
+objects through public cached URLs.
 
 The default runtime contract is:
 
@@ -194,8 +198,8 @@ offline-only and are not part of the default runtime path.
 ## Distribution Strategy
 
 ```text
-The Git repository stores manifests, schemas, tools, and docs.
-Cloudflare R2 stores immutable profile blobs and versioned release catalogs.
+The Git repository is the authoring surface for manifests, schemas, tools, and docs.
+Cloudflare R2 is the published registry surface for immutable profile blobs, versioned release catalogs, and mutable channel pointers.
 Cloudflare CDN serves public profile URLs with aggressive edge caching.
 Content-addressed blobs are reused across releases to reduce storage and write operations.
 Mutable channel files (stable/latest) are small and updated last.

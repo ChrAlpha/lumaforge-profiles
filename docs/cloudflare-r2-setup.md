@@ -1,8 +1,10 @@
 # Cloudflare R2 Setup
 
-This repository publishes immutable profile blobs and versioned release indexes
-to Cloudflare R2, then serves public downloads through a custom-domain CDN
-fronted by Cloudflare.
+This repository authors manifests, schemas, tooling, and release workflows, but
+once R2/S3 is the distribution source, the published profile registry is also
+maintained through the bucket itself. Immutable profile blobs, versioned
+release indexes, and mutable channel pointers are written to Cloudflare R2 and
+then served through a custom-domain CDN fronted by Cloudflare.
 
 ## Required Cloudflare resources
 
