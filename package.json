@@ -22,6 +22,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1038.0",
     "commander": "^13.1.0",
+    "dotenv": "^17.4.2",
     "execa": "^9.5.2",
     "fast-glob": "^3.3.3",
     "fs-extra": "^11.3.0",

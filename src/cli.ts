@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { Command } from "commander";
 
+import { loadDotenvFiles } from "./env";
 import { importProfiles } from "./import/write-entry";
 import { entriesByKind, generateRepositoryIndex } from "./manifest";
 import { formatValidationIssue, validateProfiles } from "./manifest/validate";
@@ -10,6 +11,8 @@ import { buildR2Release, loadBuiltR2Release } from "./release/r2-build";
 import { runR2Gc } from "./release/r2-gc";
 import { R2Publisher } from "./release/r2-publisher";
 import { loadR2ConfigFromEnv, R2ObjectStore } from "./release/r2-store";
+
+loadDotenvFiles({ cwd: process.cwd() });
 
 function printValidation(result: Awaited<ReturnType<typeof validateProfiles>>) {
   for (const warning of result.warnings) {
