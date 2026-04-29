@@ -62,7 +62,9 @@ Every entry must include `manifest.json` with at least:
 - `sourceUrl`
 - `redistributionAllowed`
 - `targets`
+- `assets[].role`
 - `assets[].path`
+- `assets[].mediaType`
 - `assets[].byteSize`
 - `assets[].sha256`
 
@@ -96,8 +98,8 @@ release.
 Run:
 
 ```bash
-pnpm profiles validate
-pnpm profiles validate --release
+pnpm profiles:validate
+pnpm profiles:validate --release
 ```
 
 The release gate rejects entries when:
@@ -110,9 +112,13 @@ The release gate rejects entries when:
 - any asset hash or byte size differs from the manifest
 - any asset path escapes its entry directory
 
-`pnpm profiles pack --tag <tag>` runs the release gate before creating zip
-packs. `pnpm profiles release --tag <tag>` defaults to dry-run and only
-executes GitHub CLI commands when `--yes` is supplied.
+`pnpm profiles:build-release --tag <tag> --repo <owner/name>` runs the release
+gate before creating the release index, per-asset release files, entry manifest
+files, and checksums. `pnpm profiles:pack --tag <tag>` is only a compatibility
+alias for the same single-asset release build; it does not create zip archives.
+Use `pnpm profiles:release:dry-run --tag <tag> --repo <owner/name>` to inspect
+uploads and `pnpm profiles:release --tag <tag> --repo <owner/name>` to execute
+them.
 
 ## Pull Request Checklist
 
@@ -124,4 +130,6 @@ executes GitHub CLI commands when `--yes` is supplied.
 - Required license text is included in `LICENSE` or `LICENSES/`.
 - No large profile asset is committed to Git history.
 - `pnpm test` passes.
-- `pnpm profiles validate --release` passes for releasable entries.
+- `pnpm profiles:validate --release` passes for releasable entries.
+- `pnpm profiles:build-release --tag <tag> --repo <owner/name>` produces
+  individual release assets and no default zip archive.
