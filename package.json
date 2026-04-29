@@ -8,12 +8,14 @@
     "profiles:import": "tsx src/cli.ts import",
     "profiles:validate": "tsx src/cli.ts validate",
     "profiles:index": "tsx src/cli.ts index",
+    "profiles:build-release": "tsx src/cli.ts build-release",
     "profiles:pack": "tsx src/cli.ts pack",
-    "profiles:release": "tsx src/cli.ts release",
+    "profiles:release:dry-run": "tsx src/cli.ts release --dry-run",
+    "profiles:release": "tsx src/cli.ts release --yes",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
   "dependencies": {
-    "archiver": "^7.0.1",
     "commander": "^13.1.0",
     "execa": "^9.5.2",
     "fast-glob": "^3.3.3",
@@ -21,7 +23,6 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
-    "@types/archiver": "^6.0.3",
     "@types/fs-extra": "^11.0.4",
     "@types/node": "^22.13.1",
     "tsx": "^4.19.2",

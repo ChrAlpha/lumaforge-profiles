@@ -4,15 +4,8 @@ import { Command } from "commander";
 import { importProfiles } from "./import/write-entry";
 import { entriesByKind, generateRepositoryIndex } from "./manifest";
 import { formatValidationIssue, validateProfiles } from "./manifest/validate";
-import { packProfiles, type PackName } from "./pack/pack";
+import { buildReleaseProfiles } from "./release/build";
 import { releaseProfiles } from "./release/github";
-
-function parseList(value: string) {
-  return value
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
 
 function printValidation(result: Awaited<ReturnType<typeof validateProfiles>>) {
   for (const warning of result.warnings) {
@@ -100,26 +93,46 @@ program
   });
 
 program
-  .command("pack")
-  .description("Build GitHub Release zip packs")
+  .command("build-release")
+  .description("Build GitHub Release assets with one file per profile asset")
   .requiredOption("--tag <tag>", "release tag")
-  .option("--packs <packs>", "comma-separated packs: all,luts,dcp,lcp", "all,luts,dcp,lcp")
+  .option("--repo <repo>", "GitHub repository owner/name")
   .action(async (options) => {
-    const result = await packProfiles({
+    const result = await buildReleaseProfiles({
       rootDir: process.cwd(),
       tag: options.tag,
-      packs: parseList(options.packs) as PackName[]
+      repo: options.repo
     });
-    console.log(`wrote ${result.packs.length} packs to ${result.outputDir}`);
-    for (const pack of result.packs) {
-      console.log(`${pack.fileName} ${pack.sha256}`);
-    }
+    console.log(`wrote release assets to ${result.outputDir}`);
+    console.log(`index: ${result.indexPath}`);
+    console.log(`runtime assets: ${result.releaseAssets.length}`);
+    console.log(`entry manifests: ${result.entryManifests.length}`);
+    console.log(`total upload bytes: ${result.totalBytes}`);
+  });
+
+program
+  .command("pack")
+  .description("Compatibility alias for build-release; writes individual release assets, not archives")
+  .requiredOption("--tag <tag>", "release tag")
+  .option("--repo <repo>", "GitHub repository owner/name")
+  .action(async (options) => {
+    const result = await buildReleaseProfiles({
+      rootDir: process.cwd(),
+      tag: options.tag,
+      repo: options.repo
+    });
+    console.log(`wrote release assets to ${result.outputDir}`);
+    console.log(`index: ${result.indexPath}`);
+    console.log(`runtime assets: ${result.releaseAssets.length}`);
+    console.log(`entry manifests: ${result.entryManifests.length}`);
+    console.log(`total upload bytes: ${result.totalBytes}`);
   });
 
 program
   .command("release")
   .description("Create or upload GitHub Release assets")
   .requiredOption("--tag <tag>", "release tag")
+  .option("--repo <repo>", "GitHub repository owner/name")
   .option("--dry-run", "print gh commands without executing them", false)
   .option("--yes", "execute gh commands", false)
   .option("--draft", "create release as draft", false)
@@ -130,11 +143,17 @@ program
     const result = await releaseProfiles({
       rootDir: process.cwd(),
       tag: options.tag,
+      repo: options.repo,
       dryRun,
       draft: options.draft,
       prerelease: options.prerelease,
       clobber: options.clobber
     });
+    console.log(`repo: ${result.repo}`);
+    console.log(`tag: ${result.tag}`);
+    console.log(`index: ${result.indexPath}`);
+    console.log(`release assets: ${result.assetCount}`);
+    console.log(`total upload bytes: ${result.totalBytes}`);
     for (const command of result.commands) {
       console.log(command.join(" "));
     }

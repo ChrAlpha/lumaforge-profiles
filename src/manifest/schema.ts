@@ -1,15 +1,15 @@
 import { z } from "zod";
 
-import { PROFILE_KINDS } from "./types";
+import { PROFILE_ASSET_ROLES, PROFILE_KINDS } from "./types";
 
 const sha256Schema = z.string().regex(/^[a-f0-9]{64}$/i);
 
 export const profileAssetSchema = z
   .object({
-    role: z.string().min(1),
+    role: z.enum(PROFILE_ASSET_ROLES),
     path: z.string().min(1),
     mediaType: z.string().min(1),
-    byteSize: z.number().int().nonnegative(),
+    byteSize: z.number().int().positive(),
     sha256: sha256Schema
   })
   .passthrough();
@@ -56,42 +56,47 @@ export const repositoryManifestSchema = z
   })
   .passthrough();
 
-export const releasePackManifestSchema = z
+export const releaseIndexSchema = z
   .object({
     schemaVersion: z.literal(1),
     id: z.string().min(1),
-    tag: z.string().min(1),
-    kindFilter: z.array(z.enum(PROFILE_KINDS)),
-    entryCount: z.number().int().nonnegative(),
-    assetCount: z.number().int().nonnegative(),
-    uncompressedBytes: z.number().int().nonnegative(),
+    title: z.string().min(1),
+    description: z.string(),
+    version: z.string().min(1),
     generatedAt: z.string().min(1),
+    release: z.object({
+      provider: z.literal("github"),
+      owner: z.string().min(1),
+      repo: z.string().min(1),
+      tag: z.string().min(1)
+    }),
     entries: z.array(
       z.object({
+        schemaVersion: z.literal(1),
         id: z.string().min(1),
-        manifest: z.string().min(1)
-      })
-    )
-  })
-  .passthrough();
-
-export const releaseManifestSchema = z
-  .object({
-    schemaVersion: z.literal(1),
-    id: z.string().min(1),
-    tag: z.string().min(1),
-    generatedAt: z.string().min(1),
-    totalEntries: z.number().int().nonnegative(),
-    entriesByKind: z.record(z.number().int().nonnegative()),
-    packs: z.array(
-      z.object({
-        fileName: z.string().min(1),
-        mediaType: z.literal("application/zip"),
-        byteSize: z.number().int().nonnegative(),
-        sha256: sha256Schema,
-        entryCount: z.number().int().nonnegative(),
-        assetCount: z.number().int().nonnegative(),
-        kindFilter: z.array(z.enum(PROFILE_KINDS))
+        kind: z.enum(PROFILE_KINDS),
+        version: z.string().min(1),
+        title: z.string().min(1),
+        license: z.string().min(1),
+        redistributionAllowed: z.literal(true),
+        manifest: z.object({
+          originalPath: z.string().min(1),
+          releaseAssetName: z.string().regex(/^[A-Za-z0-9._-]+$/)
+        }),
+        assets: z.array(
+          z.object({
+            role: z.enum(PROFILE_ASSET_ROLES),
+            mediaType: z.string().min(1),
+            originalPath: z.string().min(1),
+            releaseAssetName: z.string().regex(/^[A-Za-z0-9._-]+$/),
+            size: z.number().int().positive(),
+            sha256: sha256Schema,
+            download: z.object({
+              type: z.literal("github-release-asset"),
+              url: z.string().url()
+            })
+          })
+        )
       })
     )
   })

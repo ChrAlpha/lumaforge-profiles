@@ -12,6 +12,20 @@ export type ProfileFormat = "cube" | "dcp" | "lcp" | string;
 
 export type ProfileSource = "original" | "local-import" | "third-party" | "derived" | string;
 
+export const PROFILE_ASSET_ROLES = [
+  "cube-lut",
+  "camera-profile",
+  "dcp",
+  "icc",
+  "lens-correction",
+  "lcp",
+  "metadata",
+  "license",
+  "notice"
+] as const;
+
+export type ProfileAssetRole = (typeof PROFILE_ASSET_ROLES)[number];
+
 export interface ProfileAsset {
   role: string;
   path: string;
@@ -69,41 +83,41 @@ export interface RepositoryManifest {
   [key: string]: unknown;
 }
 
-export interface PackManifestEntry {
-  id: string;
-  manifest: string;
-}
-
-export interface ReleasePackManifest {
-  schemaVersion: 1;
-  id: string;
-  tag: string;
-  kindFilter: ProfileKind[];
-  entryCount: number;
-  assetCount: number;
-  uncompressedBytes: number;
-  generatedAt: string;
-  entries: PackManifestEntry[];
-}
-
-export interface ReleaseManifestPack {
-  fileName: string;
-  mediaType: "application/zip";
-  byteSize: number;
+export interface ReleaseIndexAsset {
+  role: string;
+  mediaType: string;
+  originalPath: string;
+  releaseAssetName: string;
+  size: number;
   sha256: string;
-  entryCount: number;
-  assetCount: number;
-  kindFilter: ProfileKind[];
+  download: {
+    type: "github-release-asset";
+    url: string;
+  };
 }
 
-export interface ReleaseManifest {
+export interface ReleaseIndexEntry extends Omit<ProfileManifest, "assets"> {
+  manifest: {
+    originalPath: string;
+    releaseAssetName: string;
+  };
+  assets: ReleaseIndexAsset[];
+}
+
+export interface ReleaseIndex {
   schemaVersion: 1;
   id: string;
-  tag: string;
+  title: string;
+  description: string;
+  version: string;
   generatedAt: string;
-  totalEntries: number;
-  entriesByKind: Record<string, number>;
-  packs: ReleaseManifestPack[];
+  release: {
+    provider: "github";
+    owner: string;
+    repo: string;
+    tag: string;
+  };
+  entries: ReleaseIndexEntry[];
 }
 
 export const FORMAT_BY_KIND: Record<ProfileKind, string[]> = {
@@ -116,8 +130,18 @@ export const FORMAT_BY_KIND: Record<ProfileKind, string[]> = {
 
 export const ROLE_BY_FORMAT: Record<string, string> = {
   cube: "cube-lut",
-  dcp: "dng-camera-profile",
-  lcp: "lens-correction-profile"
+  dcp: "dcp",
+  lcp: "lcp"
+};
+
+export const MEDIA_TYPE_BY_EXTENSION: Record<string, string> = {
+  ".cube": "application/x-cube-lut",
+  ".dcp": "application/x-adobe-dng-camera-profile",
+  ".lcp": "application/x-adobe-lens-correction-profile",
+  ".json": "application/json",
+  ".icc": "application/vnd.iccprofile",
+  ".txt": "text/plain",
+  ".md": "text/markdown"
 };
 
 export const KIND_SHORT_BY_KIND: Record<ProfileKind, string> = {

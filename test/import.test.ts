@@ -40,14 +40,14 @@ describe("profile import", () => {
     expect(classifyProfileFile("Camera Standard.dcp")).toMatchObject({
       kind: "camera-profile",
       format: "dcp",
-      role: "dng-camera-profile",
-      mediaType: "application/x-dng-camera-profile"
+      role: "dcp",
+      mediaType: "application/x-adobe-dng-camera-profile"
     });
     expect(classifyProfileFile("Lens.lcp")).toMatchObject({
       kind: "lens-correction-profile",
       format: "lcp",
-      role: "lens-correction-profile",
-      mediaType: "application/x-lens-correction-profile"
+      role: "lcp",
+      mediaType: "application/x-adobe-lens-correction-profile"
     });
     expect(classifyProfileFile("notes.txt")).toBeNull();
   });

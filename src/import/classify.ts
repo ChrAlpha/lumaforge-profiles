@@ -21,14 +21,14 @@ const classifications: Record<string, ProfileClassification> = {
   ".dcp": {
     kind: "camera-profile",
     format: "dcp",
-    role: "dng-camera-profile",
-    mediaType: "application/x-dng-camera-profile"
+    role: "dcp",
+    mediaType: "application/x-adobe-dng-camera-profile"
   },
   ".lcp": {
     kind: "lens-correction-profile",
     format: "lcp",
-    role: "lens-correction-profile",
-    mediaType: "application/x-lens-correction-profile"
+    role: "lcp",
+    mediaType: "application/x-adobe-lens-correction-profile"
   }
 };
 

@@ -2,7 +2,7 @@ import path from "node:path";
 
 import { discoverManifestPaths } from "./discover";
 import { formatZodError, profileEntryManifestSchema } from "./schema";
-import { FORMAT_BY_KIND, ROLE_BY_FORMAT, type ProfileManifest } from "./types";
+import { FORMAT_BY_KIND, MEDIA_TYPE_BY_EXTENSION, ROLE_BY_FORMAT, type ProfileManifest } from "./types";
 import { fileByteSize, fs, isSafeRelativePosixPath, readJsonFile, toPosixPath } from "../utils/fs";
 import { sha256File } from "../utils/hash";
 
@@ -46,6 +46,10 @@ function normalizedAssetPath(assetPath: string) {
   return path.posix.normalize(assetPath);
 }
 
+function isValidProfileVersion(version: string) {
+  return /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(version);
+}
+
 export function formatValidationIssue(validationIssue: ValidationIssue) {
   const where = [validationIssue.entryId, validationIssue.manifestPath, validationIssue.field].filter(Boolean).join(" ");
   return `[${validationIssue.code}]${where ? ` ${where}` : ""}: ${validationIssue.message}`;
@@ -84,6 +88,12 @@ export async function validateProfiles(options: ValidateProfilesOptions): Promis
     }
 
     const manifest = parsed.data as ProfileManifest;
+    if (!isValidProfileVersion(manifest.version)) {
+      result.errors.push(
+        issue("version", `Profile version must be semantic version-like, found ${manifest.version}.`, manifestPath, manifest.id, "version")
+      );
+    }
+
     const previousPath = ids.get(manifest.id);
     if (previousPath) {
       result.errors.push(
@@ -120,6 +130,19 @@ export async function validateProfiles(options: ValidateProfilesOptions): Promis
       }
 
       const assetPath = normalizedAssetPath(asset.path);
+      const expectedMediaType = MEDIA_TYPE_BY_EXTENSION[path.posix.extname(assetPath).toLowerCase()];
+      if (expectedMediaType && asset.mediaType !== expectedMediaType) {
+        result.errors.push(
+          issue(
+            "asset-media-type",
+            `Asset ${asset.path} expects mediaType ${expectedMediaType}.`,
+            manifestPath,
+            manifest.id,
+            "assets.mediaType"
+          )
+        );
+      }
+
       const absoluteAssetPath = path.join(options.rootDir, path.dirname(manifestPath), assetPath);
       if (!(await fs.pathExists(absoluteAssetPath))) {
         result.errors.push(issue("asset-missing", `Asset file does not exist: ${asset.path}.`, manifestPath, manifest.id, "assets.path"));
@@ -127,6 +150,9 @@ export async function validateProfiles(options: ValidateProfilesOptions): Promis
       }
 
       const actualByteSize = await fileByteSize(absoluteAssetPath);
+      if (actualByteSize <= 0 || asset.byteSize <= 0) {
+        result.errors.push(issue("asset-empty", `Asset file must be larger than zero bytes: ${asset.path}.`, manifestPath, manifest.id, "assets.byteSize"));
+      }
       if (actualByteSize !== asset.byteSize) {
         result.errors.push(
           issue("asset-byte-size", `Expected ${asset.byteSize} bytes but found ${actualByteSize}.`, manifestPath, manifest.id, "assets.byteSize")
@@ -169,6 +195,13 @@ export async function validateProfiles(options: ValidateProfilesOptions): Promis
         result,
         Boolean(options.release),
         issue("release-author", "author is required for release.", manifestPath, manifest.id, "author")
+      );
+    }
+    if (!manifest.source.trim()) {
+      addReleaseIssue(
+        result,
+        Boolean(options.release),
+        issue("release-source", "source is required for release.", manifestPath, manifest.id, "source")
       );
     }
 

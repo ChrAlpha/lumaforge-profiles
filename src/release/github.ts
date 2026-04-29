@@ -3,10 +3,12 @@ import path from "node:path";
 import { execa } from "execa";
 
 import { fs } from "../utils/fs";
+import { resolveGithubRepository } from "./build";
 
 export interface GithubReleaseOptions {
   rootDir: string;
   tag: string;
+  repo?: string;
   dryRun?: boolean;
   draft?: boolean;
   prerelease?: boolean;
@@ -16,7 +18,11 @@ export interface GithubReleaseOptions {
 
 export interface GithubReleasePlan {
   tag: string;
+  repo: string;
   outputDir: string;
+  indexPath: string;
+  assetCount: number;
+  totalBytes: number;
   dryRun: boolean;
   commands: string[][];
   assets: string[];
@@ -24,26 +30,61 @@ export interface GithubReleasePlan {
 
 export interface GithubReleaseResult extends GithubReleasePlan {}
 
-async function releaseAssetPaths(outputDir: string) {
-  const entries = await fs.readdir(outputDir);
-  const assets = entries
-    .filter((entry) => entry.endsWith(".zip") || entry === "release-manifest.json" || entry === "SHA256SUMS" || entry === "RELEASE_NOTES.md")
-    .sort((a, b) => {
-      const rank = (name: string) => (name.endsWith(".zip") ? 0 : name === "release-manifest.json" ? 1 : name === "SHA256SUMS" ? 2 : 3);
-      return rank(a) - rank(b) || a.localeCompare(b);
-    })
-    .map((entry) => path.join(outputDir, entry));
+async function listFilesIfExists(directory: string) {
+  if (!(await fs.pathExists(directory))) {
+    return [];
+  }
+  const entries = await fs.readdir(directory);
+  return entries.sort((a, b) => a.localeCompare(b)).map((entry) => path.join(directory, entry));
+}
+
+async function releaseAssetPaths(outputDir: string, tag: string) {
+  const indexPath = path.join(outputDir, `lumaforge-profiles.${tag}.index.json`);
+  const checksumsPath = path.join(outputDir, `lumaforge-profiles.${tag}.checksums.txt`);
+  const required = [indexPath, checksumsPath];
+  for (const filePath of required) {
+    if (!(await fs.pathExists(filePath))) {
+      throw new Error(`Missing release asset ${filePath}. Run profiles build-release first.`);
+    }
+  }
+  const assets = [
+    indexPath,
+    checksumsPath,
+    ...(await listFilesIfExists(path.join(outputDir, "assets"))),
+    ...(await listFilesIfExists(path.join(outputDir, "entries")))
+  ];
+  const assetNames = new Map<string, string>();
+  for (const assetPath of assets) {
+    const name = path.basename(assetPath);
+    const previous = assetNames.get(name);
+    if (previous) {
+      throw new Error(`Release asset basename collision: ${name} for ${previous} and ${assetPath}`);
+    }
+    assetNames.set(name, assetPath);
+  }
   if (assets.length === 0) {
-    throw new Error(`No release assets found in ${outputDir}. Run profiles pack first.`);
+    throw new Error(`No release assets found in ${outputDir}. Run profiles build-release first.`);
   }
   return assets;
 }
 
 export async function buildGithubReleasePlan(options: GithubReleaseOptions): Promise<GithubReleasePlan> {
+  const repo = resolveGithubRepository(options.repo);
   const outputDir = path.join(options.rootDir, "dist", "release", options.tag);
-  const assets = await releaseAssetPaths(outputDir);
+  const assets = await releaseAssetPaths(outputDir, options.tag);
   const notesFile = path.join(outputDir, "RELEASE_NOTES.md");
-  const createCommand = ["gh", "release", "create", options.tag, "--title", options.tag, "--notes-file", notesFile];
+  const createCommand = [
+    "gh",
+    "release",
+    "create",
+    options.tag,
+    "--title",
+    options.tag,
+    "--notes-file",
+    notesFile,
+    "--repo",
+    repo.fullName
+  ];
   if (options.draft) {
     createCommand.push("--draft");
   }
@@ -51,17 +92,22 @@ export async function buildGithubReleasePlan(options: GithubReleaseOptions): Pro
     createCommand.push("--prerelease");
   }
 
-  const uploadCommand = ["gh", "release", "upload", options.tag, ...assets];
+  const uploadCommand = ["gh", "release", "upload", options.tag, ...assets, "--repo", repo.fullName];
   if (options.clobber) {
     uploadCommand.push("--clobber");
   }
+  const sizes = await Promise.all(assets.map(async (assetPath) => (await fs.stat(assetPath)).size));
 
   return {
     tag: options.tag,
+    repo: repo.fullName,
     outputDir,
+    indexPath: path.join(outputDir, `lumaforge-profiles.${options.tag}.index.json`),
+    assetCount: assets.length,
+    totalBytes: sizes.reduce((total, size) => total + size, 0),
     dryRun: options.dryRun ?? true,
     commands: [
-      ["gh", "release", "view", options.tag],
+      ["gh", "release", "view", options.tag, "--repo", repo.fullName],
       createCommand,
       uploadCommand
     ],
@@ -86,7 +132,7 @@ export async function releaseProfiles(options: GithubReleaseOptions): Promise<Gi
 
   let releaseExists = true;
   try {
-    await runner("gh", ["release", "view", options.tag]);
+    await runner("gh", ["release", "view", options.tag, "--repo", plan.repo]);
   } catch {
     releaseExists = false;
   }
