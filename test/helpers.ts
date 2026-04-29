@@ -10,14 +10,21 @@ export async function createTempRepo(prefix = "lumaforge-profiles-test-") {
   return root;
 }
 
-export async function writeFixture(root: string, relativePath: string, content: string) {
+export async function writeFixture(
+  root: string,
+  relativePath: string,
+  content: string,
+) {
   const fullPath = path.join(root, relativePath);
   await fs.mkdir(path.dirname(fullPath), { recursive: true });
   await fs.writeFile(fullPath, content);
   return fullPath;
 }
 
-export async function readJson<T>(root: string, relativePath: string): Promise<T> {
+export async function readJson<T>(
+  root: string,
+  relativePath: string,
+): Promise<T> {
   const raw = await fs.readFile(path.join(root, relativePath), "utf8");
   return JSON.parse(raw) as T;
 }
@@ -48,22 +55,31 @@ export interface WriteProfileEntryOptions {
 const roleByFormat: Record<string, string> = {
   cube: "cube-lut",
   dcp: "dcp",
-  lcp: "lcp"
+  icc: "icc",
+  lcp: "lcp",
+  json: "color-transform",
 };
 
 const mediaTypeByFormat: Record<string, string> = {
   cube: "application/x-cube-lut",
   dcp: "application/x-adobe-dng-camera-profile",
-  lcp: "application/x-adobe-lens-correction-profile"
+  icc: "application/vnd.iccprofile",
+  lcp: "application/x-adobe-lens-correction-profile",
+  json: "application/json",
 };
 
-export async function writeProfileEntry(root: string, options: WriteProfileEntryOptions) {
+export async function writeProfileEntry(
+  root: string,
+  options: WriteProfileEntryOptions,
+) {
   const format = options.format ?? "cube";
-  const assetFileName = options.assetFileName ?? `${options.id.split(".").pop()}.${format}`;
+  const assetFileName =
+    options.assetFileName ?? `${options.id.split(".").pop()}.${format}`;
   const assetPath = await writeFixture(
     root,
     `${options.entryDir}/assets/${assetFileName}`,
-    options.assetContent ?? (format === "cube" ? "TITLE \"safe\"\n" : `fake ${format}\n`)
+    options.assetContent ??
+      (format === "cube" ? 'TITLE "safe"\n' : `fake ${format}\n`),
   );
   const byteSize = (await fs.stat(assetPath)).size;
   const sha256 = await sha256File(assetPath);
@@ -85,15 +101,22 @@ export async function writeProfileEntry(root: string, options: WriteProfileEntry
       {
         role: options.role ?? roleByFormat[format] ?? "metadata",
         path: `assets/${assetFileName}`,
-        mediaType: options.mediaType ?? mediaTypeByFormat[format] ?? "application/octet-stream",
+        mediaType:
+          options.mediaType ??
+          mediaTypeByFormat[format] ??
+          "application/octet-stream",
         byteSize,
-        sha256
-      }
+        sha256,
+      },
     ],
     createdAt: "2026-04-28T00:00:00.000Z",
     updatedAt: "2026-04-28T00:00:00.000Z",
-    ...(options.lut ? { lut: options.lut } : {})
+    ...(options.lut ? { lut: options.lut } : {}),
   };
-  await writeFixture(root, `${options.entryDir}/manifest.json`, JSON.stringify(manifest, null, 2));
+  await writeFixture(
+    root,
+    `${options.entryDir}/manifest.json`,
+    JSON.stringify(manifest, null, 2),
+  );
   return { assetPath, byteSize, sha256, manifest };
 }

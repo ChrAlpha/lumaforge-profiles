@@ -4,7 +4,12 @@ import path from "node:path";
 import { importProfiles } from "../src/import/write-entry";
 import { buildReleaseProfiles } from "../src/release/build";
 import { sha256File } from "../src/utils/hash";
-import { createTempRepo, readJson, writeFixture, writeProfileEntry } from "./helpers";
+import {
+  createTempRepo,
+  readJson,
+  writeFixture,
+  writeProfileEntry,
+} from "./helpers";
 
 describe("single-asset release build", () => {
   test("builds an index-first release with one GitHub asset per LUT, DCP, and LCP", async () => {
@@ -14,7 +19,7 @@ describe("single-asset release build", () => {
       entryDir: "profiles/lut.lumaforge.neutral-rec709.v1",
       title: "Neutral Rec.709",
       assetFileName: "neutral-rec709.cube",
-      assetContent: "TITLE \"Neutral Rec.709\"\n",
+      assetContent: 'TITLE "Neutral Rec.709"\n',
       lut: {
         title: "Neutral Rec.709",
         dimension: "3d",
@@ -25,8 +30,8 @@ describe("single-asset release build", () => {
         outputGamut: "rec709",
         intent: "display-look",
         family: "lumaforge-examples",
-        variant: "neutral-rec709"
-      }
+        variant: "neutral-rec709",
+      },
     });
     const dcp = await writeProfileEntry(root, {
       id: "org.lumaforge.camera.sony.ilce-7m4",
@@ -35,7 +40,7 @@ describe("single-asset release build", () => {
       format: "dcp",
       title: "Sony ILCE-7M4 Standard",
       assetFileName: "standard.dcp",
-      assetContent: "fake dcp profile\n"
+      assetContent: "fake dcp profile\n",
     });
     const lcp = await writeProfileEntry(root, {
       id: "org.lumaforge.lens.sony.fe-24-70mm-f2-8-gm-ii",
@@ -44,35 +49,47 @@ describe("single-asset release build", () => {
       format: "lcp",
       title: "Sony FE 24-70mm F2.8 GM II",
       assetFileName: "profile.lcp",
-      assetContent: "<lensprofile><model>FE 24-70mm F2.8 GM II</model></lensprofile>\n"
+      assetContent:
+        "<lensprofile><model>FE 24-70mm F2.8 GM II</model></lensprofile>\n",
     });
 
     const result = await buildReleaseProfiles({
       rootDir: root,
       tag: "v2026.04.28",
       repo: "lumaforge/lumaforge-profiles",
-      now: "2026-04-28T00:00:00.000Z"
+      now: "2026-04-28T00:00:00.000Z",
     });
 
-    expect(result.outputDir).toBe(path.join(root, "dist", "release", "v2026.04.28"));
-    expect(result.releaseAssets.map((asset) => asset.releaseAssetName).sort()).toEqual([
+    expect(result.outputDir).toBe(
+      path.join(root, "dist", "release", "v2026.04.28"),
+    );
+    expect(
+      result.releaseAssets.map((asset) => asset.releaseAssetName).sort(),
+    ).toEqual([
       "asset.camera.sony.ilce-7m4.v1.dcp",
       "asset.lens.sony.fe-24-70mm-f2-8-gm-ii.v1.lcp",
-      "asset.lut.lumaforge.neutral-rec709.v1.cube"
+      "asset.lut.lumaforge.neutral-rec709.v1.cube",
     ]);
-    expect((await fs.readdir(path.join(result.outputDir, "assets"))).sort()).toEqual([
+    expect(
+      (await fs.readdir(path.join(result.outputDir, "assets"))).sort(),
+    ).toEqual([
       "asset.camera.sony.ilce-7m4.v1.dcp",
       "asset.lens.sony.fe-24-70mm-f2-8-gm-ii.v1.lcp",
-      "asset.lut.lumaforge.neutral-rec709.v1.cube"
+      "asset.lut.lumaforge.neutral-rec709.v1.cube",
     ]);
-    expect((await fs.readdir(path.join(result.outputDir, "entries"))).sort()).toEqual([
+    expect(
+      (await fs.readdir(path.join(result.outputDir, "entries"))).sort(),
+    ).toEqual([
       "entry.camera.sony.ilce-7m4.v1.manifest.json",
       "entry.lens.sony.fe-24-70mm-f2-8-gm-ii.v1.manifest.json",
-      "entry.lut.lumaforge.neutral-rec709.v1.manifest.json"
+      "entry.lut.lumaforge.neutral-rec709.v1.manifest.json",
     ]);
     expect(await findFiles(result.outputDir, ".zip")).toEqual([]);
 
-    const index = await readJson<any>(root, "dist/release/v2026.04.28/lumaforge-profiles.v2026.04.28.index.json");
+    const index = await readJson<any>(
+      root,
+      "dist/release/v2026.04.28/lumaforge-profiles.v2026.04.28.index.json",
+    );
     expect(index).toMatchObject({
       schemaVersion: 1,
       id: "org.lumaforge.profiles",
@@ -81,69 +98,99 @@ describe("single-asset release build", () => {
         provider: "github",
         owner: "lumaforge",
         repo: "lumaforge-profiles",
-        tag: "v2026.04.28"
-      }
+        tag: "v2026.04.28",
+      },
     });
     expect(index.entries.map((entry: any) => entry.kind).sort()).toEqual([
       "camera-profile",
       "lens-correction-profile",
-      "lut"
+      "lut",
     ]);
-    expect(index.entries.flatMap((entry: any) => entry.assets.map((asset: any) => asset.download.url))).toEqual(
+    expect(
+      index.entries.flatMap((entry: any) =>
+        entry.assets.map((asset: any) => asset.download.url),
+      ),
+    ).toEqual(
       expect.arrayContaining([
         "https://github.com/lumaforge/lumaforge-profiles/releases/download/v2026.04.28/asset.lut.lumaforge.neutral-rec709.v1.cube",
         "https://github.com/lumaforge/lumaforge-profiles/releases/download/v2026.04.28/asset.camera.sony.ilce-7m4.v1.dcp",
-        "https://github.com/lumaforge/lumaforge-profiles/releases/download/v2026.04.28/asset.lens.sony.fe-24-70mm-f2-8-gm-ii.v1.lcp"
-      ])
+        "https://github.com/lumaforge/lumaforge-profiles/releases/download/v2026.04.28/asset.lens.sony.fe-24-70mm-f2-8-gm-ii.v1.lcp",
+      ]),
     );
-    expect(index.entries.flatMap((entry: any) => entry.assets.map((asset: any) => asset.download.url))).not.toEqual(
-      expect.arrayContaining([expect.stringContaining(".zip")])
-    );
-    expect(index.entries.find((entry: any) => entry.id === "org.lumaforge.lut.neutral-rec709").lut).toMatchObject({
+    expect(
+      index.entries.flatMap((entry: any) =>
+        entry.assets.map((asset: any) => asset.download.url),
+      ),
+    ).not.toEqual(expect.arrayContaining([expect.stringContaining(".zip")]));
+    expect(
+      index.entries.find(
+        (entry: any) => entry.id === "org.lumaforge.lut.neutral-rec709",
+      ).lut,
+    ).toMatchObject({
       inputTransfer: "srgb",
       inputGamut: "rec709",
       outputTransfer: "srgb",
       outputGamut: "rec709",
-      intent: "display-look"
+      intent: "display-look",
     });
 
     const indexedAssets = new Map(
       index.entries.flatMap((entry: any) =>
-        entry.assets.map((asset: any) => [asset.releaseAssetName, asset])
-      )
+        entry.assets.map((asset: any) => [asset.releaseAssetName, asset]),
+      ),
     );
-    expect(indexedAssets.get("asset.lut.lumaforge.neutral-rec709.v1.cube")).toMatchObject({
+    expect(
+      indexedAssets.get("asset.lut.lumaforge.neutral-rec709.v1.cube"),
+    ).toMatchObject({
       role: "cube-lut",
       mediaType: "application/x-cube-lut",
       originalPath: "assets/neutral-rec709.cube",
       size: lut.byteSize,
       sha256: lut.sha256,
       download: {
-        type: "github-release-asset"
-      }
+        type: "github-release-asset",
+      },
     });
-    expect(indexedAssets.get("asset.camera.sony.ilce-7m4.v1.dcp")).toMatchObject({
+    expect(
+      indexedAssets.get("asset.camera.sony.ilce-7m4.v1.dcp"),
+    ).toMatchObject({
       role: "dcp",
       mediaType: "application/x-adobe-dng-camera-profile",
       size: dcp.byteSize,
-      sha256: dcp.sha256
+      sha256: dcp.sha256,
     });
-    expect(indexedAssets.get("asset.lens.sony.fe-24-70mm-f2-8-gm-ii.v1.lcp")).toMatchObject({
+    expect(
+      indexedAssets.get("asset.lens.sony.fe-24-70mm-f2-8-gm-ii.v1.lcp"),
+    ).toMatchObject({
       role: "lcp",
       mediaType: "application/x-adobe-lens-correction-profile",
       size: lcp.byteSize,
-      sha256: lcp.sha256
+      sha256: lcp.sha256,
     });
 
-    const checksums = await fs.readFile(path.join(result.outputDir, "lumaforge-profiles.v2026.04.28.checksums.txt"), "utf8");
-    expect(checksums).toContain("assets/asset.lut.lumaforge.neutral-rec709.v1.cube");
-    expect(checksums).toContain("entries/entry.camera.sony.ilce-7m4.v1.manifest.json");
+    const checksums = await fs.readFile(
+      path.join(
+        result.outputDir,
+        "lumaforge-profiles.v2026.04.28.checksums.txt",
+      ),
+      "utf8",
+    );
+    expect(checksums).toContain(
+      "assets/asset.lut.lumaforge.neutral-rec709.v1.cube",
+    );
+    expect(checksums).toContain(
+      "entries/entry.camera.sony.ilce-7m4.v1.manifest.json",
+    );
     expect(checksums).toContain("lumaforge-profiles.v2026.04.28.index.json");
   });
 
   test("builds release output from imported complex local asset trees", async () => {
     const root = await createTempRepo();
-    await writeFixture(root, "local-assets/LUTs/film/cinematic-rec709.cube", "TITLE \"Cinematic Rec.709\"\n");
+    await writeFixture(
+      root,
+      "local-assets/LUTs/film/cinematic-rec709.cube",
+      'TITLE "Cinematic Rec.709"\n',
+    );
 
     await importProfiles({
       rootDir: root,
@@ -152,33 +199,44 @@ describe("single-asset release build", () => {
       author: "LumaForge contributors",
       license: "CC0-1.0",
       redistributionAllowed: true,
-      now: "2026-04-28T00:00:00.000Z"
+      now: "2026-04-28T00:00:00.000Z",
     });
 
     const result = await buildReleaseProfiles({
       rootDir: root,
       tag: "v2026.04.28",
       repo: "lumaforge/lumaforge-profiles",
-      now: "2026-04-28T00:00:00.000Z"
+      now: "2026-04-28T00:00:00.000Z",
     });
 
-    expect(result.releaseAssets.map((asset) => asset.releaseAssetName)).toEqual([
-      "asset.lut.lumaforge.cinematic-rec709.v1.cube"
-    ]);
-    const index = await readJson<any>(root, "dist/release/v2026.04.28/lumaforge-profiles.v2026.04.28.index.json");
+    expect(result.releaseAssets.map((asset) => asset.releaseAssetName)).toEqual(
+      ["asset.lut.lumaforge.cinematic-rec709.v1.cube"],
+    );
+    const index = await readJson<any>(
+      root,
+      "dist/release/v2026.04.28/lumaforge-profiles.v2026.04.28.index.json",
+    );
     expect(index.entries[0].assets[0]).toMatchObject({
       releaseAssetName: "asset.lut.lumaforge.cinematic-rec709.v1.cube",
       download: {
-        url: "https://github.com/lumaforge/lumaforge-profiles/releases/download/v2026.04.28/asset.lut.lumaforge.cinematic-rec709.v1.cube"
-      }
+        url: "https://github.com/lumaforge/lumaforge-profiles/releases/download/v2026.04.28/asset.lut.lumaforge.cinematic-rec709.v1.cube",
+      },
     });
   });
 
-  test("fails fast when deterministic release asset names collide", async () => {
+  test("fails fast when a manifest defines multiple primary assets for one entry", async () => {
     const root = await createTempRepo();
     const entryDir = "profiles/lut.lumaforge.multi.v1";
-    const firstAssetPath = await writeFixture(root, `${entryDir}/assets/a.cube`, "same bytes\n");
-    const secondAssetPath = await writeFixture(root, `${entryDir}/assets/b.cube`, "same bytes\n");
+    const firstAssetPath = await writeFixture(
+      root,
+      `${entryDir}/assets/a.cube`,
+      "same bytes\n",
+    );
+    const secondAssetPath = await writeFixture(
+      root,
+      `${entryDir}/assets/b.cube`,
+      "same bytes\n",
+    );
     const sha256 = await sha256File(firstAssetPath);
     const byteSize = (await fs.stat(firstAssetPath)).size;
     expect(await sha256File(secondAssetPath)).toBe(sha256);
@@ -206,31 +264,31 @@ describe("single-asset release build", () => {
               path: "assets/a.cube",
               mediaType: "application/x-cube-lut",
               byteSize,
-              sha256
+              sha256,
             },
             {
               role: "cube-lut",
               path: "assets/b.cube",
               mediaType: "application/x-cube-lut",
               byteSize,
-              sha256
-            }
+              sha256,
+            },
           ],
           createdAt: "2026-04-28T00:00:00.000Z",
-          updatedAt: "2026-04-28T00:00:00.000Z"
+          updatedAt: "2026-04-28T00:00:00.000Z",
         },
         null,
-        2
-      )
+        2,
+      ),
     );
 
     await expect(
       buildReleaseProfiles({
         rootDir: root,
         tag: "v2026.04.28",
-        repo: "lumaforge/lumaforge-profiles"
-      })
-    ).rejects.toThrow(/release asset name collision/i);
+        repo: "lumaforge/lumaforge-profiles",
+      }),
+    ).rejects.toThrow(/requires exactly one primary asset/i);
   });
 
   test("rejects non-redistributable, incomplete provenance, empty, and escaping assets before publishing", async () => {
@@ -238,22 +296,22 @@ describe("single-asset release build", () => {
     await writeProfileEntry(root, {
       id: "org.lumaforge.lut.unsafe",
       entryDir: "profiles/lut.lumaforge.unsafe.v1",
-      redistributionAllowed: false
+      redistributionAllowed: false,
     });
     await writeProfileEntry(root, {
       id: "org.lumaforge.lut.incomplete",
       entryDir: "profiles/lut.lumaforge.incomplete.v1",
       license: "",
       author: "",
-      source: " "
+      source: " ",
     });
     await writeProfileEntry(root, {
       id: "org.lumaforge.lut.empty",
       entryDir: "profiles/lut.lumaforge.empty.v1",
       assetFileName: "empty.cube",
-      assetContent: ""
+      assetContent: "",
     });
-    await writeFixture(root, "outside.cube", "TITLE \"outside\"\n");
+    await writeFixture(root, "outside.cube", 'TITLE "outside"\n');
     await writeFixture(
       root,
       "profiles/lut.lumaforge.escape.v1/manifest.json",
@@ -278,24 +336,26 @@ describe("single-asset release build", () => {
               path: "../outside.cube",
               mediaType: "application/x-cube-lut",
               byteSize: 16,
-              sha256: "0".repeat(64)
-            }
+              sha256: "0".repeat(64),
+            },
           ],
           createdAt: "2026-04-28T00:00:00.000Z",
-          updatedAt: "2026-04-28T00:00:00.000Z"
+          updatedAt: "2026-04-28T00:00:00.000Z",
         },
         null,
-        2
-      )
+        2,
+      ),
     );
 
     await expect(
       buildReleaseProfiles({
         rootDir: root,
         tag: "v2026.04.28",
-        repo: "lumaforge/lumaforge-profiles"
-      })
-    ).rejects.toThrow(/release-redistribution|release-license|release-author|release-source|asset-empty|asset-path/);
+        repo: "lumaforge/lumaforge-profiles",
+      }),
+    ).rejects.toThrow(
+      /release-redistribution|release-license|release-author|release-source|asset-empty|asset-path/,
+    );
   });
 });
 

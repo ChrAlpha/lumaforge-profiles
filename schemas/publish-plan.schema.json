@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LumaForge Profiles R2 Publish Plan",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "tag",
+    "generatedAt",
+    "publicBaseUrl",
+    "channelNames",
+    "objects"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "tag": { "type": "string", "minLength": 1 },
+    "generatedAt": { "type": "string", "minLength": 1 },
+    "publicBaseUrl": { "type": "string", "format": "uri" },
+    "channelNames": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "objects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "phase",
+          "key",
+          "url",
+          "localPath",
+          "contentType",
+          "cacheControl",
+          "size",
+          "action"
+        ],
+        "properties": {
+          "phase": {
+            "type": "string",
+            "enum": [
+              "blob",
+              "release-entry",
+              "release-catalog",
+              "release-metadata",
+              "channel"
+            ]
+          },
+          "key": { "type": "string", "minLength": 1 },
+          "url": { "type": "string", "format": "uri" },
+          "localPath": { "type": "string", "minLength": 1 },
+          "contentType": { "type": "string", "minLength": 1 },
+          "cacheControl": { "type": "string", "minLength": 1 },
+          "size": { "type": "integer", "minimum": 1 },
+          "action": {
+            "type": "string",
+            "enum": ["check-remote", "upload"]
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

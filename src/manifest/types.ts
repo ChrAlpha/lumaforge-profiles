@@ -3,14 +3,19 @@ export const PROFILE_KINDS = [
   "look-profile",
   "camera-profile",
   "lens-correction-profile",
-  "color-transform-profile"
+  "color-transform-profile",
 ] as const;
 
 export type ProfileKind = (typeof PROFILE_KINDS)[number];
 
-export type ProfileFormat = "cube" | "dcp" | "lcp" | string;
+export type ProfileFormat = "cube" | "dcp" | "lcp" | "icc" | "json" | string;
 
-export type ProfileSource = "original" | "local-import" | "third-party" | "derived" | string;
+export type ProfileSource =
+  | "original"
+  | "local-import"
+  | "third-party"
+  | "derived"
+  | string;
 
 export const PROFILE_ASSET_ROLES = [
   "cube-lut",
@@ -19,9 +24,11 @@ export const PROFILE_ASSET_ROLES = [
   "icc",
   "lens-correction",
   "lcp",
+  "look-profile",
+  "color-transform",
   "metadata",
   "license",
-  "notice"
+  "notice",
 ] as const;
 
 export type ProfileAssetRole = (typeof PROFILE_ASSET_ROLES)[number];
@@ -135,16 +142,22 @@ export interface ReleaseIndex {
 
 export const FORMAT_BY_KIND: Record<ProfileKind, string[]> = {
   lut: ["cube"],
-  "look-profile": [],
-  "camera-profile": ["dcp"],
-  "lens-correction-profile": ["lcp"],
-  "color-transform-profile": []
+  "look-profile": ["json"],
+  "camera-profile": ["dcp", "icc", "json"],
+  "lens-correction-profile": ["lcp", "json"],
+  "color-transform-profile": ["json", "icc"],
 };
 
-export const ROLE_BY_FORMAT: Record<string, string> = {
-  cube: "cube-lut",
-  dcp: "dcp",
-  lcp: "lcp"
+export const PRIMARY_ROLE_BY_KIND_AND_FORMAT: Record<string, string> = {
+  "lut:cube": "cube-lut",
+  "look-profile:json": "look-profile",
+  "camera-profile:dcp": "dcp",
+  "camera-profile:icc": "icc",
+  "camera-profile:json": "camera-profile",
+  "lens-correction-profile:lcp": "lcp",
+  "lens-correction-profile:json": "lens-correction",
+  "color-transform-profile:json": "color-transform",
+  "color-transform-profile:icc": "icc",
 };
 
 export const MEDIA_TYPE_BY_EXTENSION: Record<string, string> = {
@@ -154,7 +167,7 @@ export const MEDIA_TYPE_BY_EXTENSION: Record<string, string> = {
   ".json": "application/json",
   ".icc": "application/vnd.iccprofile",
   ".txt": "text/plain",
-  ".md": "text/markdown"
+  ".md": "text/markdown",
 };
 
 export const KIND_SHORT_BY_KIND: Record<ProfileKind, string> = {
@@ -162,7 +175,7 @@ export const KIND_SHORT_BY_KIND: Record<ProfileKind, string> = {
   "look-profile": "look",
   "camera-profile": "camera",
   "lens-correction-profile": "lens",
-  "color-transform-profile": "color-transform"
+  "color-transform-profile": "color-transform",
 };
 
 export const ID_KIND_SEGMENT_BY_KIND: Record<ProfileKind, string> = {
@@ -170,7 +183,7 @@ export const ID_KIND_SEGMENT_BY_KIND: Record<ProfileKind, string> = {
   "look-profile": "look",
   "camera-profile": "camera",
   "lens-correction-profile": "lens",
-  "color-transform-profile": "color-transform"
+  "color-transform-profile": "color-transform",
 };
 
 export const LUT_INTENTS = [
@@ -181,7 +194,7 @@ export const LUT_INTENTS = [
   "combined-look-output",
   "monitoring",
   "calibration",
-  "unknown"
+  "unknown",
 ] as const;
 
 export type LUTIntent = (typeof LUT_INTENTS)[number];

@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LumaForge Profiles R2 Release Catalog",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "id",
+    "title",
+    "description",
+    "tag",
+    "generatedAt",
+    "publicBaseUrl",
+    "entries"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "id": { "type": "string", "minLength": 1 },
+    "title": { "type": "string", "minLength": 1 },
+    "description": { "type": "string" },
+    "tag": { "type": "string", "minLength": 1 },
+    "generatedAt": { "type": "string", "minLength": 1 },
+    "publicBaseUrl": { "type": "string", "format": "uri" },
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "version",
+          "title",
+          "license",
+          "redistributionAllowed",
+          "primaryAsset",
+          "entryUrl"
+        ],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "lut",
+              "look-profile",
+              "camera-profile",
+              "lens-correction-profile",
+              "color-transform-profile"
+            ]
+          },
+          "version": { "type": "string", "minLength": 1 },
+          "title": { "type": "string", "minLength": 1 },
+          "license": { "type": "string", "minLength": 1 },
+          "redistributionAllowed": { "const": true },
+          "entryUrl": { "type": "string", "format": "uri" },
+          "primaryAsset": {
+            "type": "object",
+            "required": ["role", "mediaType", "size", "sha256", "url"],
+            "properties": {
+              "role": { "type": "string", "minLength": 1 },
+              "mediaType": { "type": "string", "minLength": 1 },
+              "size": { "type": "integer", "minimum": 1 },
+              "sha256": { "type": "string", "pattern": "^[a-fA-F0-9]{64}$" },
+              "url": { "type": "string", "format": "uri" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

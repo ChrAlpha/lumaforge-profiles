@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LumaForge Profiles R2 Release Entry",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "id",
+    "kind",
+    "format",
+    "version",
+    "title",
+    "description",
+    "license",
+    "author",
+    "source",
+    "sourceUrl",
+    "redistributionAllowed",
+    "targets",
+    "manifestPath",
+    "entryUrl",
+    "primaryAsset",
+    "assets",
+    "createdAt",
+    "updatedAt"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "id": { "type": "string", "minLength": 1 },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "lut",
+        "look-profile",
+        "camera-profile",
+        "lens-correction-profile",
+        "color-transform-profile"
+      ]
+    },
+    "format": { "type": "string", "minLength": 1 },
+    "version": { "type": "string", "minLength": 1 },
+    "title": { "type": "string", "minLength": 1 },
+    "description": { "type": ["string", "null"] },
+    "license": { "type": "string" },
+    "author": { "type": "string" },
+    "source": { "type": "string", "minLength": 1 },
+    "sourceUrl": { "type": ["string", "null"] },
+    "redistributionAllowed": { "const": true },
+    "targets": { "type": "object" },
+    "manifestPath": { "type": "string", "minLength": 1 },
+    "entryUrl": { "type": "string", "format": "uri" },
+    "primaryAsset": {
+      "type": "object",
+      "required": ["role", "mediaType", "size", "sha256", "url"],
+      "properties": {
+        "role": { "type": "string", "minLength": 1 },
+        "mediaType": { "type": "string", "minLength": 1 },
+        "size": { "type": "integer", "minimum": 1 },
+        "sha256": { "type": "string", "pattern": "^[a-fA-F0-9]{64}$" },
+        "url": { "type": "string", "format": "uri" }
+      },
+      "additionalProperties": false
+    },
+    "assets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "role",
+          "mediaType",
+          "originalPath",
+          "size",
+          "sha256",
+          "key",
+          "url"
+        ],
+        "properties": {
+          "role": { "type": "string", "minLength": 1 },
+          "mediaType": { "type": "string", "minLength": 1 },
+          "originalPath": { "type": "string", "minLength": 1 },
+          "size": { "type": "integer", "minimum": 1 },
+          "sha256": { "type": "string", "pattern": "^[a-fA-F0-9]{64}$" },
+          "key": { "type": "string", "minLength": 1 },
+          "url": { "type": "string", "format": "uri" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "createdAt": { "type": "string", "minLength": 1 },
+    "updatedAt": { "type": "string", "minLength": 1 }
+  },
+  "additionalProperties": true
+}

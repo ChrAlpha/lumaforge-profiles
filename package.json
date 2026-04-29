@@ -8,6 +8,10 @@
     "profiles:import": "tsx src/cli.ts import",
     "profiles:validate": "tsx src/cli.ts validate",
     "profiles:index": "tsx src/cli.ts index",
+    "profiles:build-r2": "tsx src/cli.ts build-r2",
+    "profiles:publish-r2:dry-run": "tsx src/cli.ts publish-r2 --dry-run",
+    "profiles:publish-r2": "tsx src/cli.ts publish-r2 --yes",
+    "profiles:r2:gc": "tsx src/cli.ts r2-gc",
     "profiles:build-release": "tsx src/cli.ts build-release",
     "profiles:pack": "tsx src/cli.ts pack",
     "profiles:release:dry-run": "tsx src/cli.ts release --dry-run",
@@ -16,6 +20,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1038.0",
     "commander": "^13.1.0",
     "execa": "^9.5.2",
     "fast-glob": "^3.3.3",

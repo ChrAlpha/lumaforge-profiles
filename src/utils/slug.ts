@@ -18,10 +18,7 @@ export function sanitizeFileName(fileName: string) {
 }
 
 export function titleFromStem(stem: string) {
-  const words = stem
-    .replace(/[_-]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
+  const words = toWords(stem)
     .split(" ")
     .filter(Boolean);
 
@@ -33,4 +30,11 @@ export function titleFromStem(stem: string) {
       return `${word.slice(0, 1).toUpperCase()}${word.slice(1)}`;
     })
     .join(" ");
+}
+
+export function toWords(value: string) {
+  return value
+    .replace(/[_/\\.-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }

@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LumaForge Profiles R2 Blob Manifest",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "tag",
+    "generatedAt",
+    "totalBlobBytes",
+    "blobs"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "tag": { "type": "string", "minLength": 1 },
+    "generatedAt": { "type": "string", "minLength": 1 },
+    "totalBlobBytes": { "type": "integer", "minimum": 0 },
+    "blobs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["key", "url", "mediaType", "size", "sha256", "references"],
+        "properties": {
+          "key": { "type": "string", "minLength": 1 },
+          "url": { "type": "string", "format": "uri" },
+          "mediaType": { "type": "string", "minLength": 1 },
+          "size": { "type": "integer", "minimum": 1 },
+          "sha256": { "type": "string", "pattern": "^[a-fA-F0-9]{64}$" },
+          "references": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["entryId", "role", "originalPath"],
+              "properties": {
+                "entryId": { "type": "string", "minLength": 1 },
+                "role": { "type": "string", "minLength": 1 },
+                "originalPath": { "type": "string", "minLength": 1 }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

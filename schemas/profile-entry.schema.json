@@ -51,10 +51,7 @@
       "minLength": 1
     },
     "description": {
-      "type": [
-        "string",
-        "null"
-      ]
+      "type": ["string", "null"]
     },
     "license": {
       "type": "string"
@@ -67,10 +64,7 @@
       "minLength": 1
     },
     "sourceUrl": {
-      "type": [
-        "string",
-        "null"
-      ]
+      "type": ["string", "null"]
     },
     "redistributionAllowed": {
       "type": "boolean"
@@ -83,13 +77,7 @@
       "minItems": 1,
       "items": {
         "type": "object",
-        "required": [
-          "role",
-          "path",
-          "mediaType",
-          "byteSize",
-          "sha256"
-        ],
+        "required": ["role", "path", "mediaType", "byteSize", "sha256"],
         "properties": {
           "role": {
             "type": "string",
@@ -100,6 +88,8 @@
               "icc",
               "lens-correction",
               "lcp",
+              "look-profile",
+              "color-transform",
               "metadata",
               "license",
               "notice"
@@ -142,10 +132,7 @@
         },
         "dimension": {
           "type": "string",
-          "enum": [
-            "1d",
-            "3d"
-          ]
+          "enum": ["1d", "3d"]
         },
         "size": {
           "type": "integer",

@@ -6,6 +6,10 @@ import { entriesByKind, generateRepositoryIndex } from "./manifest";
 import { formatValidationIssue, validateProfiles } from "./manifest/validate";
 import { buildReleaseProfiles } from "./release/build";
 import { releaseProfiles } from "./release/github";
+import { buildR2Release, loadBuiltR2Release } from "./release/r2-build";
+import { runR2Gc } from "./release/r2-gc";
+import { R2Publisher } from "./release/r2-publisher";
+import { loadR2ConfigFromEnv, R2ObjectStore } from "./release/r2-store";
 
 function printValidation(result: Awaited<ReturnType<typeof validateProfiles>>) {
   for (const warning of result.warnings) {
@@ -34,11 +38,18 @@ program
   .option("--source-url <url>", "source URL")
   .option("--license <license>", "profile license")
   .option("--author <author>", "profile author")
-  .option("--redistribution-allowed", "mark imported entries as redistributable", false)
+  .option(
+    "--redistribution-allowed",
+    "mark imported entries as redistributable",
+    false,
+  )
   .option("--dry-run", "print import plan without writing files", false)
   .option("--move", "move source assets instead of copying", false)
   .option("--overwrite-assets", "overwrite existing asset files", false)
-  .option("--no-keep-existing-metadata", "replace curated fields in existing manifests")
+  .option(
+    "--no-keep-existing-metadata",
+    "replace curated fields in existing manifests",
+  )
   .action(async (options) => {
     const result = await importProfiles({
       rootDir: process.cwd(),
@@ -53,13 +64,17 @@ program
       dryRun: options.dryRun,
       move: options.move,
       overwriteAssets: options.overwriteAssets,
-      keepExistingMetadata: options.keepExistingMetadata
+      keepExistingMetadata: options.keepExistingMetadata,
     });
 
     for (const entry of result.written) {
-      console.log(`${entry.action}: ${entry.sourcePath} -> ${entry.manifestPath}`);
+      console.log(
+        `${entry.action}: ${entry.sourcePath} -> ${entry.manifestPath}`,
+      );
     }
-    console.log(`${result.dryRun ? "planned" : "imported"} ${result.written.length} of ${result.scanned} scanned assets`);
+    console.log(
+      `${result.dryRun ? "planned" : "imported"} ${result.written.length} of ${result.scanned} scanned assets`,
+    );
 
     if (result.validation) {
       printValidation(result.validation);
@@ -74,7 +89,10 @@ program
   .description("Validate flattened profile manifests and local assets")
   .option("--release", "treat release-safety warnings as errors", false)
   .action(async (options) => {
-    const result = await validateProfiles({ rootDir: process.cwd(), release: options.release });
+    const result = await validateProfiles({
+      rootDir: process.cwd(),
+      release: options.release,
+    });
     printValidation(result);
     if (result.errors.length > 0) {
       process.exitCode = 1;
@@ -101,7 +119,7 @@ program
     const result = await buildReleaseProfiles({
       rootDir: process.cwd(),
       tag: options.tag,
-      repo: options.repo
+      repo: options.repo,
     });
     console.log(`wrote release assets to ${result.outputDir}`);
     console.log(`index: ${result.indexPath}`);
@@ -111,15 +129,136 @@ program
   });
 
 program
+  .command("build-r2")
+  .description(
+    "Build Cloudflare R2/CDN release artifacts with content-addressed blobs",
+  )
+  .requiredOption("--tag <tag>", "release tag")
+  .option("--public-base-url <url>", "public CDN base URL")
+  .option("--channel <name...>", "channel names to embed in release metadata")
+  .action(async (options) => {
+    const result = await buildR2Release({
+      rootDir: process.cwd(),
+      tag: options.tag,
+      publicBaseUrl: options.publicBaseUrl,
+      channelNames: options.channel,
+      now: process.env.LUMAFORGE_PROFILES_NOW,
+    });
+    console.log(`wrote R2 release artifacts to ${result.outputDir}`);
+    console.log(`catalog: ${result.catalogPath}`);
+    console.log(`release: ${result.releasePath}`);
+    console.log(`entries: ${result.entries.length}`);
+    console.log(`unique blobs: ${result.blobs.length}`);
+    console.log(`blob bytes: ${result.release.totalBlobBytes}`);
+  });
+
+program
+  .command("publish-r2")
+  .description(
+    "Publish a previously built R2 release to Cloudflare R2 and update channels last",
+  )
+  .requiredOption("--tag <tag>", "release tag")
+  .option(
+    "--channel <name...>",
+    "channel names",
+    process.env.LUMAFORGE_PROFILES_CHANNEL?.split(",").filter(Boolean),
+  )
+  .option("--dry-run", "print the upload plan without writing objects", false)
+  .option("--yes", "execute uploads", false)
+  .action(async (options) => {
+    const config = loadR2ConfigFromEnv();
+    const store = new R2ObjectStore(config);
+    const publisher = new R2Publisher({
+      bucket: config.bucket,
+      publicBaseUrl: config.publicBaseUrl,
+      store,
+    });
+    const build = await loadBuiltR2Release({
+      rootDir: process.cwd(),
+      tag: options.tag,
+    });
+    const dryRun = options.dryRun || !options.yes;
+    const result = await publisher.publish({
+      build,
+      channelNames: options.channel ?? [],
+      dryRun,
+    });
+    console.log(`bucket: ${result.bucket}`);
+    console.log(`tag: ${result.tag}`);
+    console.log(`objects: ${result.objects.length}`);
+    console.log(`uploaded blobs: ${result.uploadedBlobCount}`);
+    console.log(`skipped blobs: ${result.skippedBlobCount}`);
+    console.log(`estimated Class A ops: ${result.estimatedClassAOperations}`);
+    console.log(`estimated Class B ops: ${result.estimatedClassBOperations}`);
+    for (const object of result.objects) {
+      console.log(`${object.action}\t${object.phase}\t${object.key}`);
+    }
+    if (result.dryRun) {
+      console.log("dry-run: no R2 objects were uploaded");
+    }
+  });
+
+program
+  .command("r2-gc")
+  .description(
+    "Plan or execute Cloudflare R2 garbage collection for old releases and unreferenced blobs",
+  )
+  .option(
+    "--keep-releases <count>",
+    "keep the most recent N releases in addition to channel references",
+    (value) => Number(value),
+    0,
+  )
+  .option("--keep-tags <tags>", "comma-separated release tags to keep")
+  .option("--channel <name...>", "channel names to protect", [
+    "stable",
+    "latest",
+  ])
+  .option("--dry-run", "print the delete plan without removing objects", false)
+  .option("--yes", "execute deletions", false)
+  .action(async (options) => {
+    const config = loadR2ConfigFromEnv();
+    const store = new R2ObjectStore(config);
+    const dryRun = options.dryRun || !options.yes;
+    const keepTags =
+      typeof options.keepTags === "string"
+        ? options.keepTags
+            .split(",")
+            .map((item: string) => item.trim())
+            .filter(Boolean)
+        : [];
+    const result = await runR2Gc({
+      store,
+      keepReleases: options.keepReleases,
+      keepTags,
+      channelNames: options.channel,
+      dryRun,
+    });
+    console.log(`keep tags: ${result.keepTags.join(", ") || "(none)"}`);
+    console.log(`delete objects: ${result.deleteKeys.length}`);
+    console.log(`delete bytes: ${result.deleteBytes}`);
+    console.log(`estimated Class A ops: ${result.estimatedClassAOperations}`);
+    console.log(`estimated Class B ops: ${result.estimatedClassBOperations}`);
+    for (const key of result.deleteKeys) {
+      console.log(`delete\t${key}`);
+    }
+    if (result.dryRun) {
+      console.log("dry-run: no R2 objects were deleted");
+    }
+  });
+
+program
   .command("pack")
-  .description("Compatibility alias for build-release; writes individual release assets, not archives")
+  .description(
+    "Compatibility alias for build-release; writes individual release assets, not archives",
+  )
   .requiredOption("--tag <tag>", "release tag")
   .option("--repo <repo>", "GitHub repository owner/name")
   .action(async (options) => {
     const result = await buildReleaseProfiles({
       rootDir: process.cwd(),
       tag: options.tag,
-      repo: options.repo
+      repo: options.repo,
     });
     console.log(`wrote release assets to ${result.outputDir}`);
     console.log(`index: ${result.indexPath}`);
@@ -147,7 +286,7 @@ program
       dryRun,
       draft: options.draft,
       prerelease: options.prerelease,
-      clobber: options.clobber
+      clobber: options.clobber,
     });
     console.log(`repo: ${result.repo}`);
     console.log(`tag: ${result.tag}`);

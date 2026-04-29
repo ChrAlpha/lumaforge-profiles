@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LumaForge Profiles R2 Release Metadata",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "tag",
+    "createdAt",
+    "entryCount",
+    "blobCount",
+    "totalBlobBytes",
+    "catalogUrl",
+    "channelNames",
+    "sourceGitCommit"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "tag": { "type": "string", "minLength": 1 },
+    "createdAt": { "type": "string", "minLength": 1 },
+    "entryCount": { "type": "integer", "minimum": 0 },
+    "blobCount": { "type": "integer", "minimum": 0 },
+    "totalBlobBytes": { "type": "integer", "minimum": 0 },
+    "catalogUrl": { "type": "string", "format": "uri" },
+    "channelNames": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "sourceGitCommit": {
+      "type": ["string", "null"]
+    }
+  },
+  "additionalProperties": false
+}
