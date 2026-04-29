@@ -165,6 +165,7 @@ export async function importProfiles(options: ImportProfilesOptions): Promise<Im
     const sourcePackageContract = item.classification.format === "cube" ? inferSourcePackageLutContract(item.relativePath) : undefined;
     const lutContract = item.classification.format === "cube"
       ? inferLutContract({
+          title,
           ...(parsedCubeMetadata ?? {}),
           ...(sourcePackageContract ?? {})
         })

@@ -374,6 +374,171 @@ describe("profile import", () => {
     expect(manifest.lut).not.toHaveProperty("outputGamut");
   });
 
+  test("applies reviewed source package rules for the remaining supported vendors", async () => {
+    const root = await createTempRepo();
+    const fixtures = [
+      {
+        namespace: "fujifilm",
+        relativePath:
+          "imports/fujifilm/gfx-eterna-55-3d-lut-v110/gfx-eterna-55-3d-lut-v110/65Grid/F-Log2C/FLog2C_to_WDR-709_65grid_V.1.10.cube",
+        content: "LUT_3D_SIZE 65\n",
+        expected: {
+          inputTransfer: "fujifilm-f-log2c",
+          inputGamut: "fujifilm-f-gamut-c",
+          outputTransfer: "srgb",
+          outputGamut: "rec709",
+          family: "fujifilm-film-simulation",
+          variant: "wdr-709",
+          contractSourceId: "fujifilm-gfx-eterna-55-f-log2c"
+        }
+      },
+      {
+        namespace: "nikon",
+        relativePath: "imports/nikon/n-log-3d-lut/3DLUT/N-Log_BT2020_to_REC709_BT1886_size_33.cube",
+        content: "LUT_3D_SIZE 33\n",
+        expected: {
+          inputTransfer: "nikon-n-log",
+          inputGamut: "rec2020",
+          outputTransfer: "bt1886",
+          outputGamut: "rec709",
+          family: "nikon-n-log",
+          intent: "technical-output",
+          contractSourceId: "nikon-n-log-3d-lut"
+        }
+      },
+      {
+        namespace: "red",
+        relativePath:
+          "imports/red/ipp2-cubes-sdr-core-v1.13/REC709/RWG_Log3G10 to REC709_BT1886 with HIGH_CONTRAST and R_3_Soft size_33 v1.13.cube",
+        content: 'TITLE "RED IPP2 LUT to map REDWideGamutRGB/Log3G10 to REC709/BT1886/HIGH_CONTRAST/Rolloff 3 - soft"\nLUT_3D_SIZE 33\n',
+        expected: {
+          inputTransfer: "red-log3g10",
+          inputGamut: "red-wide-gamut-rgb",
+          outputTransfer: "bt1886",
+          outputGamut: "rec709",
+          family: "red-ipp2-sdr",
+          intent: "combined-look-output",
+          contractSourceId: "red-ipp2-rec709"
+        }
+      },
+      {
+        namespace: "sony",
+        relativePath:
+          "imports/sony/look-profile-s-gamut3-cine-s-log3/SonyLookProfiles_SLog3_SGamut3Cine/2_SGamut3CineSLog3_To_LC-709TypeA.cube",
+        content: "TITLE \tSLog3SGamut3.CineToLC_709TypeA\nLUT_3D_SIZE 33\n",
+        expected: {
+          inputTransfer: "sony-s-log3",
+          inputGamut: "sony-s-gamut3-cine",
+          outputTransfer: "srgb",
+          outputGamut: "rec709",
+          family: "sony-look-profile",
+          variant: "lc-709typea",
+          contractSourceId: "sony-s-gamut3-cine-s-log3"
+        }
+      },
+      {
+        namespace: "leica",
+        relativePath:
+          "imports/leica/sl2-s-l-log-luts/Leica SL2-S - Leica Look Up Tables (LUT)/Classic/Classic_Rec2020.cube",
+        content: 'TITLE "Software Leica Camera LUT Film V6.3 Rec2020 Gamma 2.4"\nLUT_3D_SIZE 33\n',
+        expected: {
+          inputTransfer: "leica-l-log",
+          inputGamut: "leica-l-gamut",
+          outputTransfer: "gamma-2-4",
+          outputGamut: "rec2020",
+          family: "leica-l-log",
+          variant: "classic",
+          contractSourceId: "leica-sl2-s-l-log-luts"
+        }
+      },
+      {
+        namespace: "filmic-pro",
+        relativePath:
+          "imports/filmic-pro/apple-log-luts-64x-2023/Apple Log LUTs 64X/AppleLogToLin-v1.0_FilmicX64.cube",
+        content: 'TITLE "Apple Log to linear LUT v1.0"\nLUT_3D_SIZE 64\n',
+        expected: {
+          inputTransfer: "apple-log",
+          inputGamut: "rec2020",
+          outputTransfer: "linear",
+          outputGamut: "rec2020",
+          family: "filmic-pro-apple-log",
+          intent: "technical-output",
+          contractSourceId: "filmic-pro-apple-log-luts-64x-2023"
+        }
+      },
+      {
+        namespace: "autel-robotics",
+        relativePath:
+          "imports/autel-robotics/evo-ii-alog-to-rec709/EVOII_ALOG2Rec709.cube",
+        content: "<html>not a cube but still a downloaded asset</html>\n",
+        expected: {
+          inputTransfer: "autel-a-log",
+          inputGamut: "rec709",
+          outputTransfer: "srgb",
+          outputGamut: "rec709",
+          family: "autel-technical-lut",
+          intent: "technical-output",
+          contractSourceId: "autel-evo-ii-alog-to-rec709"
+        }
+      }
+    ] as const;
+
+    for (const fixture of fixtures) {
+      await writeFixture(root, fixture.relativePath, fixture.content);
+      const result = await importProfiles({
+        rootDir: root,
+        fromDir: path.join(root, "imports", fixture.namespace),
+        namespace: fixture.namespace,
+        author: fixture.namespace,
+        license: "NOASSERTION",
+        redistributionAllowed: false,
+        now: "2026-04-28T00:00:00.000Z"
+      });
+
+      const entry = result.written[0]!;
+      const manifest = await readJson<any>(root, `${entry.entryDir}/manifest.json`);
+      expect(manifest.lut).toMatchObject({
+        ...fixture.expected,
+        contractSource: "source-package-rule",
+        contractConfidence: "high"
+      });
+    }
+  });
+
+  test("keeps kinefinity cubes unresolved while look sidecars stay ignored", async () => {
+    const root = await createTempRepo();
+    await writeFixture(
+      root,
+      "imports/kinefinity/kc-neut/KC_NEUT.cube",
+      "TITLE \"KC NEUT\"\nLUT_3D_SIZE 33\n"
+    );
+    await writeFixture(
+      root,
+      "imports/kinefinity/kc-neut/KC_NEUT.look",
+      "<look />\n"
+    );
+
+    const result = await importProfiles({
+      rootDir: root,
+      fromDir: path.join(root, "imports"),
+      namespace: "kinefinity",
+      author: "Kinefinity",
+      license: "NOASSERTION",
+      redistributionAllowed: false,
+      now: "2026-04-28T00:00:00.000Z"
+    });
+
+    expect(result.written).toHaveLength(1);
+    const manifest = await readJson<any>(root, "profiles/lut.kinefinity.kc-neut.v1/manifest.json");
+    expect(manifest.lut).toMatchObject({
+      title: "KC NEUT",
+      dimension: "3d",
+      size: 33
+    });
+    expect(manifest.lut).not.toHaveProperty("inputTransfer");
+    expect(manifest.lut).not.toHaveProperty("contractSource");
+  });
+
   test("updates asset metadata for an existing manifest while preserving curated fields", async () => {
     const root = await createTempRepo();
     const entryDir = "profiles/lut.lumaforge.neutral-rec709.v1";
