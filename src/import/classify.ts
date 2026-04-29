@@ -58,7 +58,11 @@ export async function parseCubeMetadata(filePath: string): Promise<CubeMetadata 
 
     for (const rawLine of text.split(/\r?\n/)) {
       const line = rawLine.trim();
-      if (!line || line.startsWith("#")) {
+      if (!line) {
+        continue;
+      }
+
+      if (line.startsWith("#")) {
         continue;
       }
 

@@ -7,10 +7,12 @@ import {
   entryId
 } from "./normalize";
 import { defaultTitleForProfile, inferTargets, parseCubeMetadata } from "./classify";
+import { inferLutContract, slugWithLutContract } from "./lut-contract";
 import { scanImportDirectory } from "./scan";
+import { inferSourcePackageLutContract } from "./source-rules";
 import { generateRepositoryIndex } from "../manifest";
 import { validateProfiles, type ValidationResult } from "../manifest/validate";
-import type { ProfileManifest } from "../manifest/types";
+import type { CubeMetadata, ProfileManifest } from "../manifest/types";
 import { fileByteSize, fs, readJsonIfExists, toPosixPath, writeJsonFile } from "../utils/fs";
 import { sha256File } from "../utils/hash";
 import { sanitizeFileName, slugify } from "../utils/slug";
@@ -129,8 +131,21 @@ function mergeManifest(existing: ProfileManifest, next: ProfileManifest, keepExi
     sourceUrl: existing.sourceUrl ?? next.sourceUrl,
     targets: existing.targets ?? next.targets,
     assets: next.assets,
-    lut: next.lut ?? existing.lut,
+    lut: mergeLutMetadata(existing.lut, next.lut),
     updatedAt: next.updatedAt
+  };
+}
+
+function mergeLutMetadata(existing: CubeMetadata | undefined, next: CubeMetadata | undefined): CubeMetadata | undefined {
+  if (!existing) {
+    return next;
+  }
+  if (!next) {
+    return existing;
+  }
+  return {
+    ...next,
+    ...existing
   };
 }
 
@@ -145,9 +160,23 @@ export async function importProfiles(options: ImportProfilesOptions): Promise<Im
   for (const item of scanned) {
     const hash = await sha256File(item.absolutePath);
     const byteSize = await fileByteSize(item.absolutePath);
-    const cubeMetadata = item.classification.format === "cube" ? await parseCubeMetadata(item.absolutePath) : undefined;
-    const title = cubeMetadata?.title ?? defaultTitleForProfile(item.absolutePath);
-    const slug = slugify(path.basename(item.absolutePath, path.extname(item.absolutePath)));
+    const parsedCubeMetadata = item.classification.format === "cube" ? await parseCubeMetadata(item.absolutePath) : undefined;
+    const title = parsedCubeMetadata?.title ?? defaultTitleForProfile(item.absolutePath);
+    const sourcePackageContract = item.classification.format === "cube" ? inferSourcePackageLutContract(item.relativePath) : undefined;
+    const lutContract = item.classification.format === "cube"
+      ? inferLutContract({
+          ...(parsedCubeMetadata ?? {}),
+          ...(sourcePackageContract ?? {})
+        })
+      : undefined;
+    const cubeMetadata = parsedCubeMetadata || lutContract
+      ? {
+          ...(parsedCubeMetadata ?? {}),
+          ...(lutContract ?? {})
+        }
+      : undefined;
+    const baseSlug = slugify(path.basename(item.absolutePath, path.extname(item.absolutePath)));
+    const slug = slugWithLutContract(baseSlug, lutContract);
     const chosenEntry = await chooseEntryDir({
       rootDir: options.rootDir,
       namespace: options.namespace,
