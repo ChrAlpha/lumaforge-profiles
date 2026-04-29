@@ -78,6 +78,9 @@ For each approved asset or generated transform, capture at least:
 | Official URL | Stable product/download/support URL. |
 | License | Exact license or terms URL, not inferred from free download. |
 | Redistribution | `allowed`, `denied`, `unclear`, or `local-only`. |
+| Contract Source | Example: `source-package-rule`, `manual-review`, `clf-metadata`, or `vendor-manifest`. |
+| Contract Source ID | Stable rule, package, or reviewed source identifier. |
+| Contract Confidence | `high`, `medium`, or `low` before release review. |
 | Notes | Full/legal range, exposure anchor, monitoring vs output use, tone map, highlight roll-off. |
 
 ## Repo Import Rule
@@ -89,5 +92,14 @@ For each approved asset or generated transform, capture at least:
 3. For camera-log LUTs, require an explicit input and output contract. Filename
    hints are useful for triage but are not enough to define a renderable
    LumaForge profile.
+   - The current importer pre-fills ARRI LogC3/LogC4 and Fujifilm
+     F-Log/F-Log2/F-Log2 C contracts from curated source-package rules, not
+     from arbitrary `.cube` comments.
+   - Treat source-package contract fields as draft metadata that still needs
+     human review before release. If a vendor package is not covered by a rule,
+     leave the LUT unresolved instead of guessing from a loose filename.
+   - Keep different input curves as separate profile entries. Do not collapse
+     LogC3 into LogC4, or F-Log/F-Log2/F-Log2 C into one asset, even when the
+     visible look name is the same.
 4. Prefer standards-source recipes for ACES/OCIO-derived transforms so that
    generated LUTs remain traceable to source tags and bake commands.
