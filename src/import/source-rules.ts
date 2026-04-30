@@ -123,6 +123,85 @@ function parseAutelVariant(normalizedPath: string) {
   return undefined;
 }
 
+function parseInsta360Variant(normalizedPath: string) {
+  const file = slugify(withoutExtension(basename(normalizedPath)));
+  const dir = dirname(normalizedPath);
+  if (dir.includes("/insta360-ace-pro-2-lut/") || file.includes("acepro2")) {
+    return "ace-pro-2";
+  }
+  if (dir.includes("/insta360-go-ultra-lut/") || file.includes("go-ultra")) {
+    return "go-ultra";
+  }
+  if (dir.includes("/insta360-x5-lut/") || file.includes("x5")) {
+    return "x5";
+  }
+  return undefined;
+}
+
+function parsePanasonicVariant(normalizedPath: string) {
+  return slugify(withoutExtension(basename(normalizedPath)));
+}
+
+function parseRedVariantParts(normalizedPath: string) {
+  const file = slugify(withoutExtension(basename(normalizedPath)));
+  const stem = file
+    .replace(/^rwg-log3g10-to-rec709-bt1886-with-/, "")
+    .replace(/-size-\d+(?:-v\d+(?:-\d+)*)?$/, "")
+    .replace(/^-+|-+$/g, "");
+  const match = /^(.*)-and-r-(\d)-([a-z0-9-]+)$/.exec(stem);
+  if (!match) {
+    return {
+      variant: stem
+    };
+  }
+  return {
+    variant: stem,
+    contrast: match[1]!,
+    rolloffIndex: match[2]!,
+    rolloffLabel: match[3]!
+  };
+}
+
+function formatRecLabel(value: string) {
+  if (value === "rec709") {
+    return "Rec.709";
+  }
+  if (value === "rec2020") {
+    return "Rec.2020";
+  }
+  return value;
+}
+
+function redDisplayTitle(normalizedPath: string) {
+  const parsed = parseRedVariantParts(normalizedPath);
+  if (!parsed.contrast || !parsed.rolloffIndex || !parsed.rolloffLabel) {
+    return undefined;
+  }
+  const contrast = parsed.contrast
+    .split("-")
+    .map((part) => (part === "no" ? "No" : `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`))
+    .join(" ");
+  const rolloffLabelMap: Record<string, string> = {
+    hard: "Hard",
+    medium: "Medium",
+    soft: "Soft",
+    verysoft: "Very Soft"
+  };
+  const rolloff = rolloffLabelMap[parsed.rolloffLabel] ?? parsed.rolloffLabel;
+  return `${contrast} / R${parsed.rolloffIndex} ${rolloff}`;
+}
+
+function leicaDisplayTitle(normalizedPath: string) {
+  const file = slugify(withoutExtension(basename(normalizedPath)));
+  const match = /^(classic|natural)(?:-(rec709|rec2020))?$/.exec(file);
+  if (!match) {
+    return undefined;
+  }
+  const style = `${match[1]!.slice(0, 1).toUpperCase()}${match[1]!.slice(1)}`;
+  const target = match[2] ? formatRecLabel(match[2]) : undefined;
+  return [style, target].filter(Boolean).join(" ");
+}
+
 const SOURCE_PACKAGE_RULES: SourcePackageRule[] = [
   {
     id: "arri-look-library-logc3-to-rec709",
@@ -356,6 +435,111 @@ const SOURCE_PACKAGE_RULES: SourcePackageRule[] = [
         family: "autel-technical-lut",
         ...(parseAutelVariant(relativePath) ? { variant: parseAutelVariant(relativePath) } : {})
       })
+  },
+  {
+    id: "dji-mavic-4-pro-d-log-to-rec709",
+    match: (relativePath) => relativePath.includes("/mavic-4-pro-d-log-to-rec709/"),
+    resolve: () =>
+      withSource("dji-mavic-4-pro-d-log-to-rec709", {
+        vendor: "dji",
+        inputTransfer: "dji-d-log",
+        inputGamut: "dji-d-gamut",
+        outputTransfer: "srgb",
+        outputGamut: "rec709",
+        intent: "technical-output",
+        family: "dji-mavic-4-pro"
+      })
+  },
+  {
+    id: "dji-mavic-4-pro-d-log-m-to-rec709",
+    match: (relativePath) => relativePath.includes("/mavic-4-pro-d-log-m-to-rec709/"),
+    resolve: () =>
+      withSource("dji-mavic-4-pro-d-log-m-to-rec709", {
+        vendor: "dji",
+        inputTransfer: "dji-d-log-m",
+        // DJI's public D-Log M pages describe the color mode but do not expose
+        // a standard-gamut identifier. Keep a vendor-specific contract token so
+        // we do not over-claim Rec.709 compatibility upstream.
+        inputGamut: "dji-d-log-m-gamut",
+        outputTransfer: "srgb",
+        outputGamut: "rec709",
+        intent: "technical-output",
+        family: "dji-mavic-4-pro"
+      })
+  },
+  {
+    id: "insta360-lut-10-i-log-to-rec709",
+    match: (relativePath) =>
+      relativePath.includes("/insta360-lut-10/")
+      && relativePath.includes("i-log-to-rec.709"),
+    resolve: (relativePath) =>
+      withSource("insta360-lut-10-i-log-to-rec709", {
+        vendor: "insta360",
+        inputTransfer: "insta360-i-log",
+        inputGamut: "rec709",
+        outputTransfer: "srgb",
+        outputGamut: "rec709",
+        intent: "technical-output",
+        family: "insta360-i-log",
+        ...(parseInsta360Variant(relativePath) ? { variant: parseInsta360Variant(relativePath) } : {})
+      })
+  },
+  {
+    id: "om-system-flat-bt709-to-sdr-bt709",
+    match: (relativePath) => relativePath.includes("/om3-lut-flat-bt.709-to-sdr-bt.709-v1.0/"),
+    resolve: () =>
+      withSource("om-system-flat-bt709-to-sdr-bt709", {
+        vendor: "om-system",
+        inputTransfer: "om-system-flat",
+        inputGamut: "rec709",
+        outputTransfer: "om-system-sdr",
+        outputGamut: "rec709",
+        intent: "technical-output",
+        family: "om-system-3d-lut"
+      })
+  },
+  {
+    id: "om-system-om-log400-bt2020-to-wdr-bt709",
+    match: (relativePath) => relativePath.includes("/om3-lut-om-log400-bt.2020-to-wdr-bt.709-v1.0/"),
+    resolve: () =>
+      withSource("om-system-om-log400-bt2020-to-wdr-bt709", {
+        vendor: "om-system",
+        inputTransfer: "om-system-om-log400",
+        inputGamut: "rec2020",
+        outputTransfer: "om-system-wdr",
+        outputGamut: "rec709",
+        intent: "technical-output",
+        family: "om-system-3d-lut"
+      })
+  },
+  {
+    id: "om-system-om-log400-p3-d65-to-wdr-bt709",
+    match: (relativePath) => relativePath.includes("/om3-lut-om-log400-p3-d65-to-wdr-bt.709-v1.0/"),
+    resolve: () =>
+      withSource("om-system-om-log400-p3-d65-to-wdr-bt709", {
+        vendor: "om-system",
+        inputTransfer: "om-system-om-log400",
+        inputGamut: "display-p3",
+        outputTransfer: "om-system-wdr",
+        outputGamut: "rec709",
+        intent: "technical-output",
+        family: "om-system-3d-lut"
+      })
+  },
+  {
+    id: "panasonic-v-log-v-gamut-to-rec709-from-lumix-lab",
+    match: (relativePath) => relativePath.includes("/v-log-v-gamut-to-rec709-from-lumix-lab/"),
+    resolve: (relativePath) =>
+      withSource("panasonic-v-log-v-gamut-to-rec709-from-lumix-lab", {
+        vendor: "panasonic",
+        inputTransfer: "v-log",
+        inputGamut: "v-gamut",
+        outputTransfer: "srgb",
+        outputGamut: "rec709",
+        intent: "display-look",
+        family: "panasonic-lumix-lab",
+        ...(parsePanasonicVariant(relativePath) ? { variant: parsePanasonicVariant(relativePath) } : {})
+      })
   }
 ];
 
@@ -363,4 +547,15 @@ export function inferSourcePackageLutContract(relativePath: string): Partial<Cub
   const normalized = `/${normalizePath(relativePath)}`;
   const rule = SOURCE_PACKAGE_RULES.find((entry) => entry.match(normalized));
   return rule?.resolve(normalized);
+}
+
+export function inferSourcePackageDisplayTitle(relativePath: string): string | undefined {
+  const normalized = `/${normalizePath(relativePath)}`;
+  if (normalized.includes("/ipp2-cubes-sdr-core-v1.13/rec709/")) {
+    return redDisplayTitle(normalized);
+  }
+  if (normalized.includes("/sl2-s-l-log-luts/")) {
+    return leicaDisplayTitle(normalized);
+  }
+  return undefined;
 }

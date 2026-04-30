@@ -93,14 +93,18 @@ For each approved asset or generated transform, capture at least:
    hints are useful for triage but are not enough to define a renderable
    LumaForge profile.
    - The current importer pre-fills reviewed source-package contracts for the
-     local ARRI, Autel, FiLMiC Pro, Fujifilm, Leica, Nikon, RED, and Sony
-     packages, not from arbitrary `.cube` comments.
+     local ARRI, Autel, DJI, FiLMiC Pro, Fujifilm, Insta360, Leica, Nikon,
+     OM System, Panasonic, RED, and Sony packages, not from arbitrary `.cube`
+     comments.
    - Treat source-package contract fields as draft metadata that still needs
      human review before release. If a vendor package is not covered by a rule,
      leave the LUT unresolved instead of guessing from a loose filename.
    - Kinefinity is intentionally still unresolved. `.look` sidecars are not
      part of the current import contract, so `KC_NEUT`, `KC_NEUTM`, and
      `kinecolor2_v09_neutral` remain manual-review entries for now.
+   - GoPro remains candidate-only until a stable official package exists
+     locally; do not promote it into the reviewed rule set from community links
+     or filename guesses.
    - Keep different input curves as separate profile entries. Do not collapse
      LogC3 into LogC4, or F-Log/F-Log2/F-Log2 C into one asset, even when the
      visible look name is the same.

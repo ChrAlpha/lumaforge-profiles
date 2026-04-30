@@ -14,7 +14,7 @@ import {
 import { defaultTitleForProfile, inferTargets, parseCubeMetadata } from "./classify";
 import { inferLutContract, slugWithLutContract } from "./lut-contract";
 import { scanImportDirectory } from "./scan";
-import { inferSourcePackageLutContract } from "./source-rules";
+import { inferSourcePackageDisplayTitle, inferSourcePackageLutContract } from "./source-rules";
 import { generateRepositoryIndex } from "../manifest";
 import { validateProfiles, type ValidationResult } from "../manifest/validate";
 import type { CubeMetadata, ProfileManifest } from "../manifest/types";
@@ -184,8 +184,11 @@ export async function importProfiles(options: ImportProfilesOptions): Promise<Im
     const originalHash = await sha256File(item.absolutePath);
     const originalByteSize = await fileByteSize(item.absolutePath);
     const parsedCubeMetadata = item.classification.format === "cube" ? await parseCubeMetadata(item.absolutePath) : undefined;
-    const title = parsedCubeMetadata?.title ?? defaultTitleForProfile(item.absolutePath);
+    const sourcePackageTitle = item.classification.format === "cube"
+      ? inferSourcePackageDisplayTitle(item.relativePath)
+      : undefined;
     const sourcePackageContract = item.classification.format === "cube" ? inferSourcePackageLutContract(item.relativePath) : undefined;
+    const title = sourcePackageTitle ?? parsedCubeMetadata?.title ?? defaultTitleForProfile(item.absolutePath);
     const lutContract = item.classification.format === "cube"
       ? inferLutContract({
           title,

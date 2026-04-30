@@ -104,18 +104,20 @@ Camera-log LUTs should carry an explicit render contract:
 Camera-log LUTs with different input curves are separate contracts, not
 duplicate assets. The importer uses curated source-package rules for the
 reviewed local vendor packages currently under `.local-profile-imports/`:
-`arri`, `autel-robotics`, `filmic-pro`, `fujifilm`, `leica`, `nikon`, `red`,
-and `sony`. A rule may add the input/output contract and append a readable
-contract suffix to the entry slug so same-name looks do not collapse into
-hash-only collisions.
+`arri`, `autel-robotics`, `dji`, `filmic-pro`, `fujifilm`, `insta360`,
+`leica`, `nikon`, `om-system`, `panasonic`, `red`, and `sony`. A rule may add
+the input/output contract and append a readable contract suffix to the entry
+slug so same-name looks do not collapse into hash-only collisions.
 
 The `.cube` parser intentionally does not treat free-form comments as trusted
 contract metadata. If no source-package rule matches, imported LUTs stay
 unresolved until a maintainer edits the manifest or adds a new reviewed source
 rule. Kinefinity currently stays in that unresolved bucket: `.cube` assets can
 be staged, but `.look` sidecars are ignored and no reviewed contract rule is
-applied yet. Maintainers should still review vendor terms and contract metadata
-before marking an entry redistributable.
+applied yet. GoPro also remains outside the reviewed rule set until a stable
+official package is mirrored locally and the contract can be reviewed.
+Maintainers should still review vendor terms and contract metadata before
+marking an entry redistributable.
 
 When `--migrate-luts-to-acescct-ap1` is enabled, supported imported `.cube`
 LUTs with complete reviewed input/output contracts are baked into canonical
