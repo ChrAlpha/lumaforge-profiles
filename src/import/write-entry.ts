@@ -63,6 +63,22 @@ export interface ImportProfilesResult {
   validation?: ValidationResult;
 }
 
+function isPlaceholderCubeTitle(title: string | undefined) {
+  const normalized = slugify(title ?? "");
+  return normalized === "generated" || normalized === "generated-by-resolve";
+}
+
+function resolvedCubeTitle(
+  parsedTitle: string | undefined,
+  fallbackTitle: string,
+) {
+  const trimmed = parsedTitle?.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+  return isPlaceholderCubeTitle(trimmed) ? fallbackTitle : trimmed;
+}
+
 function existingManifestPath(rootDir: string, relativeEntryDir: string) {
   return path.join(rootDir, relativeEntryDir, "manifest.json");
 }
@@ -188,17 +204,28 @@ export async function importProfiles(options: ImportProfilesOptions): Promise<Im
       ? inferSourcePackageDisplayTitle(item.relativePath)
       : undefined;
     const sourcePackageContract = item.classification.format === "cube" ? inferSourcePackageLutContract(item.relativePath) : undefined;
-    const title = sourcePackageTitle ?? parsedCubeMetadata?.title ?? defaultTitleForProfile(item.absolutePath);
+    const defaultTitle = defaultTitleForProfile(item.absolutePath);
+    const sanitizedCubeTitle = resolvedCubeTitle(
+      parsedCubeMetadata?.title,
+      sourcePackageTitle ?? defaultTitle,
+    );
+    const normalizedCubeMetadata = parsedCubeMetadata && sanitizedCubeTitle && sanitizedCubeTitle !== parsedCubeMetadata.title
+      ? {
+          ...parsedCubeMetadata,
+          title: sanitizedCubeTitle
+        }
+      : parsedCubeMetadata;
+    const title = sourcePackageTitle ?? sanitizedCubeTitle ?? defaultTitle;
     const lutContract = item.classification.format === "cube"
       ? inferLutContract({
           title,
-          ...(parsedCubeMetadata ?? {}),
+          ...(normalizedCubeMetadata ?? {}),
           ...(sourcePackageContract ?? {})
         })
       : undefined;
-    let cubeMetadata = parsedCubeMetadata || lutContract
+    let cubeMetadata = normalizedCubeMetadata || lutContract
       ? {
-          ...(parsedCubeMetadata ?? {}),
+          ...(normalizedCubeMetadata ?? {}),
           ...(lutContract ?? {})
         }
       : undefined;
