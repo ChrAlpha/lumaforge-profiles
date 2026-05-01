@@ -51,6 +51,7 @@
           "license": { "type": "string", "minLength": 1 },
           "redistributionAllowed": { "const": true },
           "entryUrl": { "type": "string", "format": "uri" },
+          "family": { "type": "string", "minLength": 1 },
           "primaryAsset": {
             "type": "object",
             "required": ["role", "mediaType", "size", "sha256", "url"],

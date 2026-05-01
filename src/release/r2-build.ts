@@ -27,6 +27,7 @@ import {
   type BuildR2ReleaseResult,
   type BuiltBlob,
   type BuiltReleaseEntryFile,
+  type CatalogEntryDocument,
   type ReleaseAssetDocument,
   type ReleaseCatalog,
   type ReleaseEntryDocument,
@@ -212,16 +213,21 @@ export async function buildR2Release(
     tag: options.tag,
     generatedAt,
     publicBaseUrl: publicBaseUrl.replace(/\/$/, ""),
-    entries: entries.map((entry) => ({
-      id: String(entry.document.id),
-      kind: String(entry.document.kind),
-      version: String(entry.document.version),
-      title: String(entry.document.title),
-      license: String(entry.document.license),
-      redistributionAllowed: true,
-      primaryAsset: entry.document.primaryAsset,
-      entryUrl: entry.document.entryUrl,
-    })),
+    entries: entries.map((entry): CatalogEntryDocument => {
+      const base: CatalogEntryDocument = {
+        id: String(entry.document.id),
+        kind: String(entry.document.kind),
+        version: String(entry.document.version),
+        title: String(entry.document.title),
+        license: String(entry.document.license),
+        redistributionAllowed: true,
+        primaryAsset: entry.document.primaryAsset,
+        entryUrl: entry.document.entryUrl,
+      };
+      const lutMeta = entry.document.lut as { family?: string } | undefined;
+      if (lutMeta?.family) base.family = String(lutMeta.family);
+      return base;
+    }),
   };
   const catalogPath = path.join(outputDir, "catalog.json");
   await writeJsonFile(catalogPath, catalog);

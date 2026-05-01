@@ -62,6 +62,7 @@ export interface CatalogEntryDocument {
   redistributionAllowed: true;
   primaryAsset: CatalogPrimaryAsset;
   entryUrl: string;
+  family?: string;
 }
 
 export interface ReleaseCatalog {
