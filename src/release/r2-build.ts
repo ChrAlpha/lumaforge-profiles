@@ -4,7 +4,7 @@ import { execa } from "execa";
 
 import { generateRepositoryIndex } from "../manifest";
 import { formatValidationIssue, validateProfiles } from "../manifest/validate";
-import type { ProfileManifest } from "../manifest/types";
+import type { ProfileKind, ProfileManifest } from "../manifest/types";
 import {
   fileByteSize,
   fs,
@@ -41,6 +41,7 @@ export interface BuildR2ReleaseOptions {
   tag: string;
   publicBaseUrl?: string;
   channelNames?: string[];
+  allowedKinds?: ProfileKind[];
   now?: string;
 }
 
@@ -97,6 +98,7 @@ export async function buildR2Release(
   const validation = await validateProfiles({
     rootDir: options.rootDir,
     release: true,
+    allowedKinds: options.allowedKinds,
   });
   if (validation.errors.length > 0) {
     throw new Error(validation.errors.map(formatValidationIssue).join("\n"));

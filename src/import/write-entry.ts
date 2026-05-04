@@ -17,7 +17,7 @@ import { scanImportDirectory } from "./scan";
 import { inferSourcePackageDisplayTitle, inferSourcePackageLutContract } from "./source-rules";
 import { generateRepositoryIndex } from "../manifest";
 import { validateProfiles, type ValidationResult } from "../manifest/validate";
-import type { CubeMetadata, ProfileManifest } from "../manifest/types";
+import type { CubeMetadata, ProfileKind, ProfileManifest } from "../manifest/types";
 import { fileByteSize, fs, readJsonIfExists, toPosixPath, writeJsonFile } from "../utils/fs";
 import { sha256File, sha256Text } from "../utils/hash";
 import { sanitizeFileName, slugify } from "../utils/slug";
@@ -27,6 +27,7 @@ export interface ImportProfilesOptions {
   rootDir: string;
   fromDir: string;
   namespace: string;
+  kind?: ProfileKind;
   version?: string;
   source?: string;
   sourceUrl?: string | null;
@@ -58,9 +59,17 @@ export interface ImportWrittenEntry {
 
 export interface ImportProfilesResult {
   scanned: number;
+  skipped: ImportSkippedEntry[];
   written: ImportWrittenEntry[];
   dryRun: boolean;
   validation?: ValidationResult;
+}
+
+export interface ImportSkippedEntry {
+  sourcePath: string;
+  relativePath: string;
+  kind: ProfileKind;
+  reason: "kind-filter";
 }
 
 function isPlaceholderCubeTitle(title: string | undefined) {
@@ -193,10 +202,23 @@ export async function importProfiles(options: ImportProfilesOptions): Promise<Im
   const timestamp = options.now ?? nowIso();
   const keepExistingMetadata = options.keepExistingMetadata ?? true;
   const scanned = await scanImportDirectory(options.fromDir);
+  const skipped: ImportSkippedEntry[] = options.kind
+    ? scanned
+        .filter((item) => item.classification.kind !== options.kind)
+        .map((item) => ({
+          sourcePath: item.absolutePath,
+          relativePath: item.relativePath,
+          kind: item.classification.kind,
+          reason: "kind-filter" as const,
+        }))
+    : [];
+  const importItems = options.kind
+    ? scanned.filter((item) => item.classification.kind === options.kind)
+    : scanned;
   const usedEntryDirs = new Set<string>();
   const written: ImportWrittenEntry[] = [];
 
-  for (const item of scanned) {
+  for (const item of importItems) {
     const originalHash = await sha256File(item.absolutePath);
     const originalByteSize = await fileByteSize(item.absolutePath);
     const parsedCubeMetadata = item.classification.format === "cube" ? await parseCubeMetadata(item.absolutePath) : undefined;
@@ -358,16 +380,21 @@ export async function importProfiles(options: ImportProfilesOptions): Promise<Im
   if (options.dryRun) {
     return {
       scanned: scanned.length,
+      skipped,
       written,
       dryRun: true
     };
   }
 
-  const validation = await validateProfiles({ rootDir: options.rootDir });
+  const validation = await validateProfiles({
+    rootDir: options.rootDir,
+    allowedKinds: options.kind ? [options.kind] : undefined,
+  });
   await generateRepositoryIndex({ rootDir: options.rootDir, now: timestamp });
 
   return {
     scanned: scanned.length,
+    skipped,
     written,
     dryRun: false,
     validation

@@ -158,6 +158,58 @@ describe("profile import", () => {
     );
   });
 
+  test("LUT-only imports write cube assets and report non-LUT assets as skipped", async () => {
+    const root = await createTempRepo();
+    await writeFixture(
+      root,
+      "imports/looks/Neutral Rec709.cube",
+      'TITLE "Neutral Rec709"\nLUT_3D_SIZE 2\n',
+    );
+    await writeFixture(
+      root,
+      "imports/cameras/Sony Standard.dcp",
+      "fake dcp profile\n",
+    );
+    await writeFixture(
+      root,
+      "imports/lenses/Sony Lens.lcp",
+      "<lensprofile />\n",
+    );
+
+    const options = {
+      rootDir: root,
+      fromDir: path.join(root, "imports"),
+      namespace: "lumaforge",
+      author: "LumaForge contributors",
+      license: "CC0-1.0",
+      redistributionAllowed: true,
+      kind: "lut",
+      now: "2026-04-28T00:00:00.000Z",
+    } as Parameters<typeof importProfiles>[0] & { kind: "lut" };
+    const result = await importProfiles(options);
+
+    expect(result.scanned).toBe(3);
+    expect(result.written).toHaveLength(1);
+    expect(result.written[0]?.entryDir).toBe(
+      "profiles/lut.lumaforge.neutral-rec709.v1",
+    );
+    expect(result.skipped).toEqual([
+      expect.objectContaining({
+        relativePath: "cameras/Sony Standard.dcp",
+        kind: "camera-profile",
+        reason: "kind-filter",
+      }),
+      expect.objectContaining({
+        relativePath: "lenses/Sony Lens.lcp",
+        kind: "lens-correction-profile",
+        reason: "kind-filter",
+      }),
+    ]);
+    await expect(
+      fs.access(path.join(root, "profiles/camera.lumaforge.sony-standard.v1")),
+    ).rejects.toThrow();
+  });
+
   test("writes flattened manifests with copied assets, sha256, byteSize, and parsed cube metadata", async () => {
     const root = await createTempRepo();
     const sourcePath = await writeFixture(

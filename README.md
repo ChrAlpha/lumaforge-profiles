@@ -119,6 +119,18 @@ official package is mirrored locally and the contract can be reviewed.
 Maintainers should still review vendor terms and contract metadata before
 marking an entry redistributable.
 
+For expert maintainers who only want to curate and share their own LUT catalog
+from a fork, use the LUT-only R2/S3 flow:
+
+```bash
+pnpm profiles:import --from .local-profile-imports --lut-only --namespace your-name
+pnpm profiles:validate --lut-only --release
+pnpm profiles:build-r2 --lut-only --tag v2026.05.04 --public-base-url https://profiles.example.com --channel stable
+pnpm profiles:publish-r2:dry-run --tag v2026.05.04 --channel stable
+```
+
+See [docs/lut-only-r2-self-hosting.md](docs/lut-only-r2-self-hosting.md).
+
 When `--migrate-luts-to-acescct-ap1` is enabled, supported imported `.cube`
 LUTs with complete reviewed input/output contracts are baked into canonical
 ACES AP1 / ACEScct `65^3` assets. The generated manifest changes the LUT input

@@ -2,7 +2,12 @@ import path from "node:path";
 
 import { generateRepositoryIndex } from "../src/manifest";
 import { validateProfiles } from "../src/manifest/validate";
-import { createTempRepo, readJson, writeFixture } from "./helpers";
+import {
+  createTempRepo,
+  readJson,
+  writeFixture,
+  writeProfileEntry,
+} from "./helpers";
 
 const safeManifest = {
   schemaVersion: 1,
@@ -175,6 +180,38 @@ describe("manifest validation and index", () => {
         })
       })
     ]);
+  });
+
+  test("rejects non-LUT manifests when validating a LUT-only registry", async () => {
+    const root = await createTempRepo();
+    await writeProfileEntry(root, {
+      id: "org.lumaforge.lut.safe",
+      entryDir: "profiles/lut.lumaforge.safe.v1",
+      title: "Safe LUT",
+    });
+    await writeProfileEntry(root, {
+      id: "org.lumaforge.camera.sony",
+      entryDir: "profiles/camera.sony.standard.v1",
+      kind: "camera-profile",
+      format: "dcp",
+      title: "Sony Camera Profile",
+      assetFileName: "sony-standard.dcp",
+      assetContent: "fake dcp profile\n",
+    });
+
+    const options = {
+      rootDir: root,
+      allowedKinds: ["lut"],
+    } as Parameters<typeof validateProfiles>[0] & { allowedKinds: ["lut"] };
+    const result = await validateProfiles(options);
+
+    expect(result.errors).toContainEqual(
+      expect.objectContaining({
+        code: "kind-filter",
+        entryId: "org.lumaforge.camera.sony",
+        field: "kind",
+      }),
+    );
   });
 
   test("rejects asset paths that escape the entry directory", async () => {

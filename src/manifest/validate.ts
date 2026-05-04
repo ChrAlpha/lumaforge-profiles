@@ -6,6 +6,7 @@ import {
   FORMAT_BY_KIND,
   MEDIA_TYPE_BY_EXTENSION,
   PRIMARY_ROLE_BY_KIND_AND_FORMAT,
+  type ProfileKind,
   type ProfileManifest,
 } from "./types";
 import {
@@ -39,6 +40,7 @@ export interface ValidationResult {
 export interface ValidateProfilesOptions {
   rootDir: string;
   release?: boolean;
+  allowedKinds?: ProfileKind[];
 }
 
 function issue(
@@ -115,6 +117,9 @@ export async function validateProfiles(
   const manifestPaths = await discoverManifestPaths(options.rootDir);
   const ids = new Map<string, string>();
   const seenManifestPaths = new Set<string>();
+  const allowedKinds = options.allowedKinds?.length
+    ? new Set(options.allowedKinds)
+    : null;
 
   for (const manifestPath of manifestPaths) {
     if (seenManifestPaths.has(manifestPath)) {
@@ -153,6 +158,18 @@ export async function validateProfiles(
     }
 
     const manifest = parsed.data as ProfileManifest;
+    if (allowedKinds && !allowedKinds.has(manifest.kind)) {
+      result.errors.push(
+        issue(
+          "kind-filter",
+          `This registry is constrained to ${[...allowedKinds].join(", ")} entries; found ${manifest.kind}.`,
+          manifestPath,
+          manifest.id,
+          "kind",
+        ),
+      );
+    }
+
     if (!isValidProfileVersion(manifest.version)) {
       result.errors.push(
         issue(

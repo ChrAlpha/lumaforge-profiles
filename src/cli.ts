@@ -5,6 +5,7 @@ import { loadDotenvFiles } from "./env";
 import { importProfiles } from "./import/write-entry";
 import { entriesByKind, generateRepositoryIndex } from "./manifest";
 import { formatValidationIssue, validateProfiles } from "./manifest/validate";
+import { PROFILE_KINDS, type ProfileKind } from "./manifest/types";
 import { buildReleaseProfiles } from "./release/build";
 import { releaseProfiles } from "./release/github";
 import { buildR2Release, loadBuiltR2Release } from "./release/r2-build";
@@ -24,6 +25,25 @@ function printValidation(result: Awaited<ReturnType<typeof validateProfiles>>) {
   console.log(`validated ${result.manifests.length} profile entries`);
 }
 
+function resolveKindFilter(options: {
+  kind?: string;
+  lutOnly?: boolean;
+}): ProfileKind | undefined {
+  if (options.lutOnly && options.kind && options.kind !== "lut") {
+    throw new Error("--lut-only cannot be combined with --kind other than lut.");
+  }
+  const kind = options.lutOnly ? "lut" : options.kind;
+  if (!kind) {
+    return undefined;
+  }
+  if (!(PROFILE_KINDS as readonly string[]).includes(kind)) {
+    throw new Error(
+      `Unsupported profile kind ${kind}. Expected one of: ${PROFILE_KINDS.join(", ")}.`,
+    );
+  }
+  return kind as ProfileKind;
+}
+
 const program = new Command();
 
 program
@@ -36,6 +56,12 @@ program
   .description("Import local LUT/DCP/LCP assets into flattened profile entries")
   .requiredOption("--from <dir>", "local import directory")
   .option("--namespace <namespace>", "entry namespace", "lumaforge")
+  .option("--kind <kind>", "only import one profile kind")
+  .option(
+    "--lut-only",
+    "only import .cube LUT assets; equivalent to --kind lut",
+    false,
+  )
   .option("--version <version>", "entry semantic version", "1.0.0")
   .option("--source <source>", "profile source", "local-import")
   .option("--source-url <url>", "source URL")
@@ -65,10 +91,12 @@ program
     "replace curated fields in existing manifests",
   )
   .action(async (options) => {
+    const kind = resolveKindFilter(options);
     const result = await importProfiles({
       rootDir: process.cwd(),
       fromDir: options.from,
       namespace: options.namespace,
+      kind,
       version: options.version,
       source: options.source,
       sourceUrl: options.sourceUrl ?? null,
@@ -91,8 +119,17 @@ program
         `${entry.action}: ${entry.sourcePath} -> ${entry.manifestPath}${migration}`,
       );
     }
+    for (const skipped of result.skipped) {
+      console.warn(
+        `skipped: ${skipped.relativePath} [kind-filter:${skipped.kind}]`,
+      );
+    }
     console.log(
-      `${result.dryRun ? "planned" : "imported"} ${result.written.length} of ${result.scanned} scanned assets`,
+      `${result.dryRun ? "planned" : "imported"} ${result.written.length} of ${result.scanned} scanned assets${
+        result.skipped.length > 0
+          ? `; skipped ${result.skipped.length} by kind filter`
+          : ""
+      }`,
     );
 
     if (result.validation) {
@@ -107,10 +144,14 @@ program
   .command("validate")
   .description("Validate flattened profile manifests and local assets")
   .option("--release", "treat release-safety warnings as errors", false)
+  .option("--kind <kind>", "require every manifest to match one profile kind")
+  .option("--lut-only", "require every manifest to be a LUT", false)
   .action(async (options) => {
+    const kind = resolveKindFilter(options);
     const result = await validateProfiles({
       rootDir: process.cwd(),
       release: options.release,
+      allowedKinds: kind ? [kind] : undefined,
     });
     printValidation(result);
     if (result.errors.length > 0) {
@@ -155,12 +196,18 @@ program
   .requiredOption("--tag <tag>", "release tag")
   .option("--public-base-url <url>", "public CDN base URL")
   .option("--channel <name...>", "channel names to embed in release metadata")
+  .option(
+    "--lut-only",
+    "fail if the R2 release contains non-LUT entries",
+    false,
+  )
   .action(async (options) => {
     const result = await buildR2Release({
       rootDir: process.cwd(),
       tag: options.tag,
       publicBaseUrl: options.publicBaseUrl,
       channelNames: options.channel,
+      allowedKinds: options.lutOnly ? ["lut"] : undefined,
       now: process.env.LUMAFORGE_PROFILES_NOW,
     });
     console.log(`wrote R2 release artifacts to ${result.outputDir}`);

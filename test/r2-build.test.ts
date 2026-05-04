@@ -266,4 +266,31 @@ describe("R2 release build", () => {
       }),
     ).rejects.toThrow(/release-redistribution/i);
   });
+
+  test("fails closed when a LUT-only R2 build sees a non-LUT entry", async () => {
+    const root = await createTempRepo();
+    await writeProfileEntry(root, {
+      id: "org.lumaforge.lut.safe",
+      entryDir: "profiles/lut.lumaforge.safe.v1",
+      title: "Safe LUT",
+    });
+    await writeProfileEntry(root, {
+      id: "org.lumaforge.camera.sony",
+      entryDir: "profiles/camera.sony.standard.v1",
+      kind: "camera-profile",
+      format: "dcp",
+      title: "Sony Camera Profile",
+      assetFileName: "sony-standard.dcp",
+      assetContent: "fake dcp profile\n",
+    });
+
+    const options = {
+      rootDir: root,
+      tag: "v2026.05.04",
+      publicBaseUrl: "https://profiles.lumaforge.invalid",
+      allowedKinds: ["lut"],
+    } as Parameters<typeof buildR2Release>[0] & { allowedKinds: ["lut"] };
+
+    await expect(buildR2Release(options)).rejects.toThrow(/kind-filter/i);
+  });
 });
