@@ -4,7 +4,7 @@ This document covers the automated import path. It is useful for bulk local
 staging, reviewed vendor packages, and ACEScct/AP1 migration experiments. It is
 not the primary path for maintainers who prefer to hand curate
 `profiles/*/manifest.json`; for that flow, see
-[lut-only-r2-self-hosting.md](lut-only-r2-self-hosting.md).
+[lut-only-s3-self-hosting.md](lut-only-s3-self-hosting.md).
 
 ## Import and flatten
 
@@ -35,17 +35,17 @@ pnpm profiles:validate
 # 4. Regenerate the repository index
 pnpm profiles:index
 
-# 5. Build R2/CDN release artifacts
-pnpm profiles:build-r2 --tag v2026.04.29 --public-base-url https://profiles.lumaforge.invalid --channel stable
+# 5. Build S3/CDN release artifacts
+pnpm profiles:build-s3 --tag v2026.04.29 --public-base-url https://profiles.lumaforge.invalid --channel stable
 
-# 6. Dry-run the R2 publish plan
-pnpm profiles:publish-r2:dry-run --tag v2026.04.29 --channel stable
+# 6. Dry-run the S3 publish plan
+pnpm profiles:publish-s3:dry-run --tag v2026.04.29 --channel stable
 
 # 7. Publish immutable blobs and channel aliases
-pnpm profiles:publish-r2 --tag v2026.04.29 --channel stable
+pnpm profiles:publish-s3 --tag v2026.04.29 --channel stable
 
 # 8. Inspect or execute garbage collection
-pnpm profiles:r2:gc --keep-releases 3 --dry-run
+pnpm profiles:s3:gc --keep-releases 3 --dry-run
 ```
 
 The import command recursively scans `.cube`, `.dcp`, `.icc`, `.lcp`, and

@@ -4,7 +4,7 @@ Manifest-first tooling for maintaining and publishing small LUT catalogs for
 the LumaForge RAW pipeline.
 
 The common use case is a fork maintained by one person or a small group: keep a
-curated set of `.cube` LUTs, publish them to your own R2/S3-compatible bucket,
+curated set of `.cube` LUTs, publish them to your own S3-compatible bucket,
 and share the public catalog URL yourself. LumaForge does not authenticate,
 review, operate, or endorse third-party forks.
 
@@ -32,9 +32,9 @@ Then refresh generated asset metadata and publish:
 ```bash
 pnpm profiles:refresh-assets --lut-only
 pnpm profiles:validate --lut-only --release
-pnpm profiles:build-r2 --lut-only --tag v2026.05.04 --public-base-url https://profiles.example.com --channel stable
-pnpm profiles:publish-r2:dry-run --tag v2026.05.04 --channel stable
-pnpm profiles:publish-r2 --tag v2026.05.04 --channel stable
+pnpm profiles:build-s3 --lut-only --tag v2026.05.04 --public-base-url https://profiles.example.com --channel stable
+pnpm profiles:publish-s3:dry-run --tag v2026.05.04 --channel stable
+pnpm profiles:publish-s3 --tag v2026.05.04 --channel stable
 ```
 
 Share one of these public URLs:
@@ -76,10 +76,10 @@ validation and release building, but they should not be committed.
 pnpm profiles:refresh-assets --lut-only
 pnpm profiles:validate --lut-only --release
 pnpm profiles:index
-pnpm profiles:build-r2 --lut-only --tag <tag> --public-base-url <url> --channel stable
-pnpm profiles:publish-r2:dry-run --tag <tag> --channel stable
-pnpm profiles:publish-r2 --tag <tag> --channel stable
-pnpm profiles:r2:gc --keep-releases 3 --dry-run
+pnpm profiles:build-s3 --lut-only --tag <tag> --public-base-url <url> --channel stable
+pnpm profiles:publish-s3:dry-run --tag <tag> --channel stable
+pnpm profiles:publish-s3 --tag <tag> --channel stable
+pnpm profiles:s3:gc --keep-releases 3 --dry-run
 ```
 
 `profiles:refresh-assets` updates only `assets[].byteSize`,
@@ -90,9 +90,14 @@ entries, import loose files, rename directories, or infer LUT contracts.
 LUT-only forks so camera or lens profile entries do not accidentally enter a
 shared catalog.
 
+Publishing reads generic `S3_*` variables from `.env` or the shell:
+`S3_BUCKET`, `S3_ENDPOINT`, `S3_REGION`, `S3_ACCESS_KEY_ID`,
+`S3_SECRET_ACCESS_KEY`, `S3_PUBLIC_BASE_URL`, and optional
+`S3_FORCE_PATH_STYLE`.
+
 ## Distribution Model
 
-The R2/S3 publisher writes:
+The S3-compatible publisher writes:
 
 ```text
 blobs/sha256/<aa>/<bb>/<sha256>.cube
@@ -124,7 +129,7 @@ mismatches.
 
 ## More Docs
 
-- [LUT-only R2/S3 self-hosting](docs/lut-only-r2-self-hosting.md)
+- [LUT-only S3 self-hosting](docs/lut-only-s3-self-hosting.md)
 - [Cloudflare R2 setup](docs/cloudflare-r2-setup.md)
 - [Automated import workflow](docs/import-workflow.md)
 - [Official LUT source inventory](docs/official-lut-source-inventory.md)

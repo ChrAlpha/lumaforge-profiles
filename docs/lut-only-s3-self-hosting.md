@@ -1,7 +1,7 @@
-# LUT-only R2/S3 self-hosting
+# LUT-only S3 self-hosting
 
 This workflow is for maintainers who fork this repository, curate their own
-small LUT set, publish it to their own R2/S3-compatible bucket, and share the
+small LUT set, publish it to their own S3-compatible bucket, and share the
 resulting public catalog or channel URL themselves.
 
 It is not an official LumaForge LUT channel. LumaForge does not authenticate,
@@ -14,7 +14,7 @@ Use this path when:
 
 - the fork only intends to distribute `.cube` LUT entries;
 - the maintainer is comfortable reviewing LUT contracts and licenses;
-- distribution happens through the maintainer's own R2/S3 bucket and public CDN;
+- distribution happens through the maintainer's own S3-compatible bucket and public CDN;
 - sharing is link-based and unlisted, not private or access-controlled.
 
 Do not use this path to imply that a catalog is official, private, protected, or
@@ -33,14 +33,14 @@ pnpm profiles:refresh-assets --lut-only
 
 pnpm profiles:validate --lut-only --release
 
-pnpm profiles:build-r2 \
+pnpm profiles:build-s3 \
   --lut-only \
   --tag v2026.05.04 \
   --public-base-url https://profiles.example.com \
   --channel stable
 
-pnpm profiles:publish-r2:dry-run --tag v2026.05.04 --channel stable
-pnpm profiles:publish-r2 --tag v2026.05.04 --channel stable
+pnpm profiles:publish-s3:dry-run --tag v2026.05.04 --channel stable
+pnpm profiles:publish-s3 --tag v2026.05.04 --channel stable
 ```
 
 Edit the copied manifest before refreshing:
@@ -60,14 +60,14 @@ replace them with the actual file size and SHA-256.
 `profiles:refresh-assets` only refreshes `assets[].byteSize`,
 `assets[].sha256`, and `updatedAt` from files already referenced by existing
 manifests. It does not create profile entries, rename directories, infer LUT
-contracts, or import loose files. `--lut-only` on refresh, validation, and R2
+contracts, or import loose files. `--lut-only` on refresh, validation, and S3
 build fails if any manifest in the registry is not a LUT, so a fork cannot
 accidentally publish camera or lens profile entries through the LUT-only
 release path.
 
-## R2/S3 publication model
+## S3 Publication Model
 
-Use the existing R2/S3 release model as the primary distribution path:
+Use the S3-compatible release model as the primary distribution path:
 
 ```text
 blobs/sha256/<aa>/<bb>/<sha256>.cube

@@ -1,10 +1,10 @@
 # Cloudflare R2 Setup
 
 This repository authors manifests, schemas, tooling, and release workflows, but
-once R2/S3 is the distribution source, the published profile registry is also
-maintained through the bucket itself. Immutable profile blobs, versioned
-release indexes, and mutable channel pointers are written to Cloudflare R2 and
-then served through a custom-domain CDN fronted by Cloudflare.
+once S3-compatible object storage is the distribution source, the published
+profile registry is also maintained through the bucket itself. Immutable profile
+blobs, versioned release indexes, and mutable channel pointers are written to
+Cloudflare R2 and then served through a custom-domain CDN fronted by Cloudflare.
 
 ## Required Cloudflare resources
 
@@ -34,14 +34,18 @@ channels/latest/release.json
 Copy `.env.example` and set:
 
 ```text
-CLOUDFLARE_ACCOUNT_ID=
-CLOUDFLARE_R2_BUCKET=
-CLOUDFLARE_R2_ACCESS_KEY_ID=
-CLOUDFLARE_R2_SECRET_ACCESS_KEY=
-CLOUDFLARE_R2_ENDPOINT=https://<accountid>.r2.cloudflarestorage.com
-CLOUDFLARE_R2_PUBLIC_BASE_URL=https://profiles.lumaforge.invalid
+S3_BUCKET=
+S3_ENDPOINT=https://<accountid>.r2.cloudflarestorage.com
+S3_REGION=auto
+S3_ACCESS_KEY_ID=
+S3_SECRET_ACCESS_KEY=
+S3_PUBLIC_BASE_URL=https://profiles.lumaforge.invalid
+S3_FORCE_PATH_STYLE=false
 LUMAFORGE_PROFILES_CHANNEL=stable
 ```
+
+R2 is configured through the same `S3_*` variables as every other
+S3-compatible provider. Set `S3_REGION=auto` for Cloudflare R2.
 
 ## Public access and cache behavior
 
@@ -94,9 +98,9 @@ before relying on them in browser code.
 
 ```bash
 pnpm profiles:validate --release
-pnpm profiles:build-r2 --tag v2026.04.29 --public-base-url https://profiles.lumaforge.invalid --channel stable
-pnpm profiles:publish-r2:dry-run --tag v2026.04.29 --channel stable
-pnpm profiles:publish-r2 --tag v2026.04.29 --channel stable
+pnpm profiles:build-s3 --tag v2026.04.29 --public-base-url https://profiles.lumaforge.invalid --channel stable
+pnpm profiles:publish-s3:dry-run --tag v2026.04.29 --channel stable
+pnpm profiles:publish-s3 --tag v2026.04.29 --channel stable
 ```
 
 Uploads happen in this order:
@@ -116,13 +120,13 @@ That keeps channel aliases from pointing at a half-uploaded release.
 Use dry-run first:
 
 ```bash
-pnpm profiles:r2:gc --keep-releases 3 --dry-run
+pnpm profiles:s3:gc --keep-releases 3 --dry-run
 ```
 
 Then execute explicitly:
 
 ```bash
-pnpm profiles:r2:gc --keep-releases 3 --yes
+pnpm profiles:s3:gc --keep-releases 3 --yes
 ```
 
 GC keeps:
