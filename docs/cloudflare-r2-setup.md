@@ -1,5 +1,7 @@
 # Cloudflare R2 Setup
 
+Languages: [English](cloudflare-r2-setup.md) | [简体中文](cloudflare-r2-setup.zh-CN.md)
+
 This repository authors manifests, schemas, tooling, and release workflows, but
 once S3-compatible object storage is the distribution source, the published
 profile registry is also maintained through the bucket itself. Immutable profile

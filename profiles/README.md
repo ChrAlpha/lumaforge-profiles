@@ -1,5 +1,7 @@
 # Profiles
 
+Languages: [English](README.md) | [简体中文](README.zh-CN.md)
+
 Each profile entry lives in one flattened directory under `profiles/`.
 
 ```text

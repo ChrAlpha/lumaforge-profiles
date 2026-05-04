@@ -1,5 +1,7 @@
 # Notices
 
+Languages: [English](NOTICE.md) | [简体中文](NOTICE.zh-CN.md)
+
 This repository is a multi-license profile registry. Repository tooling,
 documentation, schemas, manifests, index files, and profile assets may be
 licensed under different terms.

@@ -1,5 +1,7 @@
 # Copyright Policy
 
+Languages: [English](COPYRIGHT_POLICY.md) | [简体中文](COPYRIGHT_POLICY.zh-CN.md)
+
 LumaForge Profiles accepts only assets that can be redistributed by this
 repository under clear terms.
 

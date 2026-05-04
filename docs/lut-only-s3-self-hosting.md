@@ -1,5 +1,7 @@
 # LUT-only S3 self-hosting
 
+Languages: [English](lut-only-s3-self-hosting.md) | [简体中文](lut-only-s3-self-hosting.zh-CN.md)
+
 This workflow is for maintainers who fork this repository, curate their own
 small LUT set, publish it to their own S3-compatible bucket, and share the
 resulting public catalog or channel URL themselves.

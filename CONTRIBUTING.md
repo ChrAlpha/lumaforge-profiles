@@ -1,5 +1,7 @@
 # Contributing
 
+Languages: [English](CONTRIBUTING.md) | [简体中文](CONTRIBUTING.zh-CN.md)
+
 LumaForge Profiles is a multi-license registry. Contributions must make every
 asset's copyright, source, license, and redistribution status explicit.
 
@@ -113,11 +115,11 @@ The release gate rejects entries when:
 - any asset path escapes its entry directory
 - a supported profile format does not have exactly one primary runtime asset
 
-`pnpm profiles:build-r2 --tag <tag> --public-base-url <url>` runs the release
+`pnpm profiles:build-s3 --tag <tag> --public-base-url <url>` runs the release
 gate before creating `catalog.json`, `entries/*.json`, `release.json`,
 `blobs-manifest.json`, `publish-plan.json`, and `checksums.txt`.
-Use `pnpm profiles:publish-r2:dry-run --tag <tag> --channel stable` to inspect
-uploads and `pnpm profiles:publish-r2 --tag <tag> --channel stable` to execute
+Use `pnpm profiles:publish-s3:dry-run --tag <tag> --channel stable` to inspect
+uploads and `pnpm profiles:publish-s3 --tag <tag> --channel stable` to execute
 them.
 
 ## Pull Request Checklist
@@ -131,5 +133,5 @@ them.
 - No large profile asset is committed to Git history.
 - `pnpm test` passes.
 - `pnpm profiles:validate --release` passes for releasable entries.
-- `pnpm profiles:build-r2 --tag <tag> --public-base-url <url>` produces the
-  expected `dist/r2-release/<tag>/` artifact set.
+- `pnpm profiles:build-s3 --tag <tag> --public-base-url <url>` produces the
+  expected `dist/s3-release/<tag>/` artifact set.

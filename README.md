@@ -1,5 +1,7 @@
 # lumaforge-profiles
 
+Languages: [English](README.md) | [简体中文](README.zh-CN.md)
+
 Manifest-first tooling for maintaining and publishing small LUT catalogs for
 the LumaForge RAW pipeline.
 

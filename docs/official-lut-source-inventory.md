@@ -1,5 +1,7 @@
 # Official LUT Source Inventory
 
+Languages: [English](official-lut-source-inventory.md) | [简体中文](official-lut-source-inventory.zh-CN.md)
+
 Research dates: 2026-04-28; Fujifilm supplement: 2026-04-29
 
 This is a source inventory only. Do not commit, pack, or publish third-party LUT

@@ -1,5 +1,7 @@
 # Import workflow
 
+Languages: [English](import-workflow.md) | [简体中文](import-workflow.zh-CN.md)
+
 This document covers the automated import path. It is useful for bulk local
 staging, reviewed vendor packages, and ACEScct/AP1 migration experiments. It is
 not the primary path for maintainers who prefer to hand curate
