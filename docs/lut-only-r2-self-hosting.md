@@ -25,15 +25,11 @@ reviewed by LumaForge.
 ```bash
 pnpm install
 
-mkdir -p .local-profile-imports
+mkdir -p profiles/lut.your-name.manual-warm.v1/assets
+cp /path/to/manual-warm.cube profiles/lut.your-name.manual-warm.v1/assets/manual-warm.cube
+cp examples/manifests/first-party-lut.manifest.json profiles/lut.your-name.manual-warm.v1/manifest.json
 
-pnpm profiles:import \
-  --from .local-profile-imports \
-  --lut-only \
-  --namespace your-name \
-  --author "Your Name" \
-  --license CC0-1.0 \
-  --redistribution-allowed
+pnpm profiles:refresh-assets --lut-only
 
 pnpm profiles:validate --lut-only --release
 
@@ -47,11 +43,27 @@ pnpm profiles:publish-r2:dry-run --tag v2026.05.04 --channel stable
 pnpm profiles:publish-r2 --tag v2026.05.04 --channel stable
 ```
 
-`--lut-only` on import ignores supported non-LUT assets such as `.dcp`, `.icc`,
-and `.lcp` files and reports them as skipped. `--lut-only` on validation and
-R2 build is stricter: it fails if any manifest in the registry is not a LUT, so
-a fork cannot accidentally publish camera or lens profile entries through the
-LUT-only release path.
+Edit the copied manifest before refreshing:
+
+- set `id` to a stable identifier such as `org.your-name.lut.manual-warm`;
+- keep `kind: "lut"` and `format: "cube"`;
+- set `title`, `license`, `author`, `source`, `sourceUrl`, and
+  `redistributionAllowed`;
+- point `assets[0].path` at the copied `.cube` file;
+- write the LUT contract under `lut` from maintainer-reviewed knowledge, not
+  filename guesses.
+
+During initial hand editing, `assets[].byteSize` and `assets[].sha256` may be
+temporary placeholders. Run `profiles:refresh-assets` before validation to
+replace them with the actual file size and SHA-256.
+
+`profiles:refresh-assets` only refreshes `assets[].byteSize`,
+`assets[].sha256`, and `updatedAt` from files already referenced by existing
+manifests. It does not create profile entries, rename directories, infer LUT
+contracts, or import loose files. `--lut-only` on refresh, validation, and R2
+build fails if any manifest in the registry is not a LUT, so a fork cannot
+accidentally publish camera or lens profile entries through the LUT-only
+release path.
 
 ## R2/S3 publication model
 
@@ -83,12 +95,14 @@ are better when a recipient needs exactly the same catalog over time.
 
 ## Review rules
 
-Before publishing, manually review every generated `profiles/*/manifest.json`:
+Before publishing, manually review every maintained `profiles/*/manifest.json`:
 
 - `license` must allow redistribution by the fork maintainer;
 - `author`, `source`, and `sourceUrl` should be auditable;
 - `redistributionAllowed` must only be true when redistribution is actually
   permitted;
+- `assets[].path` should point to the curated local asset path; let
+  `profiles:refresh-assets` maintain `byteSize` and `sha256`;
 - `lut.inputTransfer`, `lut.inputGamut`, `lut.outputTransfer`, and
   `lut.outputGamut` must be complete when a LUT contract is declared;
 - unresolved LUT contracts should stay local until the maintainer can verify

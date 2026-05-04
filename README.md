@@ -120,10 +120,13 @@ Maintainers should still review vendor terms and contract metadata before
 marking an entry redistributable.
 
 For expert maintainers who only want to curate and share their own LUT catalog
-from a fork, use the LUT-only R2/S3 flow:
+from a fork, use the manual LUT-only R2/S3 flow:
 
 ```bash
-pnpm profiles:import --from .local-profile-imports --lut-only --namespace your-name
+mkdir -p profiles/lut.your-name.manual-warm.v1/assets
+cp /path/to/manual-warm.cube profiles/lut.your-name.manual-warm.v1/assets/manual-warm.cube
+cp examples/manifests/first-party-lut.manifest.json profiles/lut.your-name.manual-warm.v1/manifest.json
+pnpm profiles:refresh-assets --lut-only
 pnpm profiles:validate --lut-only --release
 pnpm profiles:build-r2 --lut-only --tag v2026.05.04 --public-base-url https://profiles.example.com --channel stable
 pnpm profiles:publish-r2:dry-run --tag v2026.05.04 --channel stable

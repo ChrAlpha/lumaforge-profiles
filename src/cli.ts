@@ -4,6 +4,7 @@ import { Command } from "commander";
 import { loadDotenvFiles } from "./env";
 import { importProfiles } from "./import/write-entry";
 import { entriesByKind, generateRepositoryIndex } from "./manifest";
+import { refreshProfileAssetMetadata } from "./manifest/refresh-assets";
 import { formatValidationIssue, validateProfiles } from "./manifest/validate";
 import { PROFILE_KINDS, type ProfileKind } from "./manifest/types";
 import { buildReleaseProfiles } from "./release/build";
@@ -42,6 +43,13 @@ function resolveKindFilter(options: {
     );
   }
   return kind as ProfileKind;
+}
+
+function shortValue(value: unknown) {
+  if (typeof value !== "string") {
+    return String(value);
+  }
+  return value.length > 12 ? `${value.slice(0, 12)}...` : value;
 }
 
 const program = new Command();
@@ -157,6 +165,39 @@ program
     if (result.errors.length > 0) {
       process.exitCode = 1;
     }
+  });
+
+program
+  .command("refresh-assets")
+  .description(
+    "Refresh byteSize and sha256 in manually maintained profile manifests",
+  )
+  .option("--kind <kind>", "require every manifest to match one profile kind")
+  .option("--lut-only", "require every manifest to be a LUT", false)
+  .option("--dry-run", "print metadata changes without writing files", false)
+  .action(async (options) => {
+    const kind = resolveKindFilter(options);
+    const result = await refreshProfileAssetMetadata({
+      rootDir: process.cwd(),
+      allowedKinds: kind ? [kind] : undefined,
+      dryRun: options.dryRun,
+      now: process.env.LUMAFORGE_PROFILES_NOW,
+    });
+
+    for (const manifest of result.manifests) {
+      for (const asset of manifest.assets) {
+        if (!asset.changed) {
+          continue;
+        }
+        const prefix = result.dryRun ? "would-refresh" : "refreshed";
+        console.log(
+          `${prefix}: ${asset.assetPath} byteSize ${asset.byteSizeBefore} -> ${asset.byteSizeAfter} sha256 ${shortValue(asset.sha256Before)} -> ${shortValue(asset.sha256After)}`,
+        );
+      }
+    }
+    console.log(
+      `${result.dryRun ? "planned" : "refreshed"} ${result.changed} of ${result.scanned} profile manifests`,
+    );
   });
 
 program

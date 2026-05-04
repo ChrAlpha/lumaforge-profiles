@@ -6,6 +6,7 @@
   "scripts": {
     "profiles": "tsx src/cli.ts",
     "profiles:import": "tsx src/cli.ts import",
+    "profiles:refresh-assets": "tsx src/cli.ts refresh-assets",
     "profiles:validate": "tsx src/cli.ts validate",
     "profiles:index": "tsx src/cli.ts index",
     "profiles:build-r2": "tsx src/cli.ts build-r2",
