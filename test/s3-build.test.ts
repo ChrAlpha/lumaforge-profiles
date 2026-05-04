@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
-import { buildR2Release, loadBuiltR2Release } from "../src/release/r2-build";
+import { buildS3Release, loadBuiltS3Release } from "../src/release/s3-build";
 import { sha256Text } from "../src/utils/hash";
 import {
   readJson,
@@ -10,7 +10,7 @@ import {
   createTempRepo,
 } from "./helpers";
 
-describe("R2 release build", () => {
+describe("S3 release build", () => {
   test("builds catalog, entry documents, blob manifests, and audit files for CDN delivery", async () => {
     const root = await createTempRepo();
     const publicBaseUrl = "https://profiles.lumaforge.invalid/";
@@ -54,7 +54,7 @@ describe("R2 release build", () => {
       assetContent: "fake dcp profile\n",
     });
 
-    const result = await buildR2Release({
+    const result = await buildS3Release({
       rootDir: root,
       tag: "v2026.04.29",
       publicBaseUrl,
@@ -62,14 +62,14 @@ describe("R2 release build", () => {
     });
 
     expect(result.outputDir).toBe(
-      path.join(root, "dist", "r2-release", "v2026.04.29"),
+      path.join(root, "dist", "s3-release", "v2026.04.29"),
     );
     expect(result.blobs).toHaveLength(3);
     expect(result.entries).toHaveLength(2);
 
     const catalog = await readJson<any>(
       root,
-      "dist/r2-release/v2026.04.29/catalog.json",
+      "dist/s3-release/v2026.04.29/catalog.json",
     );
     expect(catalog.entries).toEqual(
       expect.arrayContaining([
@@ -100,7 +100,7 @@ describe("R2 release build", () => {
 
     const entryDocument = await readJson<any>(
       root,
-      "dist/r2-release/v2026.04.29/entries/org.lumaforge.lut.neutral-rec709.json",
+      "dist/s3-release/v2026.04.29/entries/org.lumaforge.lut.neutral-rec709.json",
     );
     expect(entryDocument.primaryAsset.role).toBe("cube-lut");
     expect(entryDocument.assets.map((asset: any) => asset.role).sort()).toEqual(
@@ -117,7 +117,7 @@ describe("R2 release build", () => {
 
     const release = await readJson<any>(
       root,
-      "dist/r2-release/v2026.04.29/release.json",
+      "dist/s3-release/v2026.04.29/release.json",
     );
     expect(release).toMatchObject({
       tag: "v2026.04.29",
@@ -130,7 +130,7 @@ describe("R2 release build", () => {
 
     const blobsManifest = await readJson<any>(
       root,
-      "dist/r2-release/v2026.04.29/blobs-manifest.json",
+      "dist/s3-release/v2026.04.29/blobs-manifest.json",
     );
     expect(blobsManifest.blobs).toEqual(
       expect.arrayContaining([
@@ -147,7 +147,7 @@ describe("R2 release build", () => {
 
     const publishPlan = await readJson<any>(
       root,
-      "dist/r2-release/v2026.04.29/publish-plan.json",
+      "dist/s3-release/v2026.04.29/publish-plan.json",
     );
     expect(publishPlan.objects).toEqual(
       expect.arrayContaining([
@@ -192,13 +192,13 @@ describe("R2 release build", () => {
       assetContent: 'TITLE "Same"\n',
     });
 
-    const first = await buildR2Release({
+    const first = await buildS3Release({
       rootDir: root,
       tag: "v2026.04.29",
       publicBaseUrl: "https://profiles.lumaforge.invalid",
       now: "2026-04-29T00:00:00.000Z",
     });
-    const second = await buildR2Release({
+    const second = await buildS3Release({
       rootDir: root,
       tag: "v2026.05.01",
       publicBaseUrl: "https://profiles.lumaforge.invalid",
@@ -211,7 +211,7 @@ describe("R2 release build", () => {
 
     const firstCatalog = await readJson<any>(
       root,
-      "dist/r2-release/v2026.04.29/catalog.json",
+      "dist/s3-release/v2026.04.29/catalog.json",
     );
     expect(
       new Set(firstCatalog.entries.map((entry: any) => entry.primaryAsset.url))
@@ -219,7 +219,7 @@ describe("R2 release build", () => {
     ).toBe(1);
   });
 
-  test("reloads a built R2 release from dist artifacts without rebuilding", async () => {
+  test("reloads a built S3 release from dist artifacts without rebuilding", async () => {
     const root = await createTempRepo();
     await writeProfileEntry(root, {
       id: "org.lumaforge.lut.reload",
@@ -229,13 +229,13 @@ describe("R2 release build", () => {
       assetContent: 'TITLE "Reload"\n',
     });
 
-    const built = await buildR2Release({
+    const built = await buildS3Release({
       rootDir: root,
       tag: "v2026.04.29",
       publicBaseUrl: "https://profiles.lumaforge.invalid",
       now: "2026-04-29T00:00:00.000Z",
     });
-    const loaded = await loadBuiltR2Release({
+    const loaded = await loadBuiltS3Release({
       rootDir: root,
       tag: "v2026.04.29",
     });
@@ -250,6 +250,51 @@ describe("R2 release build", () => {
     );
   });
 
+  test("builds and reloads generic S3 release artifacts from the S3 handoff directory", async () => {
+    const root = await createTempRepo();
+    await writeProfileEntry(root, {
+      id: "org.lumaforge.lut.s3",
+      entryDir: "profiles/lut.lumaforge.s3.v1",
+      title: "S3",
+      assetFileName: "s3.cube",
+      assetContent: 'TITLE "S3"\n',
+    });
+
+    const previousPublicBaseUrl = process.env.S3_PUBLIC_BASE_URL;
+    process.env.S3_PUBLIC_BASE_URL = "https://s3-profiles.example.com";
+    try {
+      const built = await buildS3Release({
+        rootDir: root,
+        tag: "v2026.05.04",
+        now: "2026-05-04T00:00:00.000Z",
+      });
+      const loaded = await loadBuiltS3Release({
+        rootDir: root,
+        tag: "v2026.05.04",
+      });
+
+      expect(built.outputDir).toBe(
+        path.join(root, "dist", "s3-release", "v2026.05.04"),
+      );
+      expect(built.catalog.publicBaseUrl).toBe(
+        "https://s3-profiles.example.com",
+      );
+      expect(built.catalog.entries[0]?.primaryAsset.url).toMatch(
+        /^https:\/\/s3-profiles\.example\.com\/blobs\/sha256\//,
+      );
+      expect(loaded.release).toEqual(built.release);
+      expect(loaded.objects.map((object) => object.key)).toEqual(
+        built.objects.map((object) => object.key),
+      );
+    } finally {
+      if (previousPublicBaseUrl === undefined) {
+        delete process.env.S3_PUBLIC_BASE_URL;
+      } else {
+        process.env.S3_PUBLIC_BASE_URL = previousPublicBaseUrl;
+      }
+    }
+  });
+
   test("fails closed when a manifest is not releasable", async () => {
     const root = await createTempRepo();
     await writeProfileEntry(root, {
@@ -259,7 +304,7 @@ describe("R2 release build", () => {
     });
 
     await expect(
-      buildR2Release({
+      buildS3Release({
         rootDir: root,
         tag: "v2026.04.29",
         publicBaseUrl: "https://profiles.lumaforge.invalid",
@@ -267,7 +312,7 @@ describe("R2 release build", () => {
     ).rejects.toThrow(/release-redistribution/i);
   });
 
-  test("fails closed when a LUT-only R2 build sees a non-LUT entry", async () => {
+  test("fails closed when a LUT-only S3 build sees a non-LUT entry", async () => {
     const root = await createTempRepo();
     await writeProfileEntry(root, {
       id: "org.lumaforge.lut.safe",
@@ -289,8 +334,8 @@ describe("R2 release build", () => {
       tag: "v2026.05.04",
       publicBaseUrl: "https://profiles.lumaforge.invalid",
       allowedKinds: ["lut"],
-    } as Parameters<typeof buildR2Release>[0] & { allowedKinds: ["lut"] };
+    } as Parameters<typeof buildS3Release>[0] & { allowedKinds: ["lut"] };
 
-    await expect(buildR2Release(options)).rejects.toThrow(/kind-filter/i);
+    await expect(buildS3Release(options)).rejects.toThrow(/kind-filter/i);
   });
 });

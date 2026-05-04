@@ -1,4 +1,4 @@
-import { planR2Gc, runR2Gc } from "../src/release/r2-gc";
+import { planS3Gc, runS3Gc } from "../src/release/s3-gc";
 
 function json(value: unknown) {
   return JSON.stringify(value, null, 2);
@@ -35,7 +35,7 @@ function createGcStore(seed: Record<string, string>) {
   };
 }
 
-describe("R2 GC", () => {
+describe("S3 GC", () => {
   test("keeps channel-referenced releases and only deletes unreferenced old blobs", async () => {
     const blobA =
       "blobs/sha256/aa/aa/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.cube";
@@ -75,7 +75,7 @@ describe("R2 GC", () => {
       [blobC]: "c",
     });
 
-    const plan = await planR2Gc({
+    const plan = await planS3Gc({
       store,
       keepReleases: 1,
       channelNames: ["stable", "latest"],
@@ -93,7 +93,7 @@ describe("R2 GC", () => {
     );
     expect(plan.deleteKeys).not.toEqual(expect.arrayContaining([blobB, blobC]));
 
-    const dryRun = await runR2Gc({
+    const dryRun = await runS3Gc({
       store,
       keepReleases: 1,
       channelNames: ["stable", "latest"],

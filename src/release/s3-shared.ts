@@ -6,13 +6,13 @@ import {
   PRIMARY_ROLE_BY_KIND_AND_FORMAT,
 } from "../manifest/types";
 
-export const DEFAULT_R2_PUBLIC_BASE_URL = "https://profiles.lumaforge.invalid";
+export const DEFAULT_S3_PUBLIC_BASE_URL = "https://profiles.lumaforge.invalid";
 export const BLOB_CACHE_CONTROL = "public, max-age=31536000, immutable";
 export const RELEASE_CACHE_CONTROL = "public, max-age=86400, immutable";
 export const CHANNEL_CACHE_CONTROL =
   "public, max-age=60, stale-while-revalidate=600";
 
-export type R2ReleaseObjectPhase =
+export type S3ReleaseObjectPhase =
   | "blob"
   | "release-entry"
   | "release-catalog"
@@ -114,8 +114,8 @@ export interface BlobsManifestDocument {
   }>;
 }
 
-export interface R2ReleaseObject {
-  phase: R2ReleaseObjectPhase;
+export interface S3ReleaseObject {
+  phase: S3ReleaseObjectPhase;
   key: string;
   url: string;
   localPath: string;
@@ -124,14 +124,14 @@ export interface R2ReleaseObject {
   size: number;
 }
 
-export interface R2PublishPlanDocument {
+export interface S3PublishPlanDocument {
   schemaVersion: 1;
   tag: string;
   generatedAt: string;
   publicBaseUrl: string;
   channelNames: string[];
   objects: Array<{
-    phase: R2ReleaseObjectPhase;
+    phase: S3ReleaseObjectPhase;
     key: string;
     url: string;
     localPath: string;
@@ -149,7 +149,7 @@ export interface BuiltReleaseEntryFile {
   document: ReleaseEntryDocument;
 }
 
-export interface BuildR2ReleaseResult {
+export interface BuildS3ReleaseResult {
   outputDir: string;
   catalogPath: string;
   releasePath: string;
@@ -159,14 +159,14 @@ export interface BuildR2ReleaseResult {
   catalog: ReleaseCatalog;
   release: ReleaseMetadataDocument;
   blobsManifest: BlobsManifestDocument;
-  publishPlan: R2PublishPlanDocument;
+  publishPlan: S3PublishPlanDocument;
   blobs: BuiltBlob[];
   entries: BuiltReleaseEntryFile[];
-  objects: R2ReleaseObject[];
+  objects: S3ReleaseObject[];
 }
 
 export function normalizePublicBaseUrl(value: string | undefined) {
-  const raw = (value ?? DEFAULT_R2_PUBLIC_BASE_URL).trim();
+  const raw = (value ?? DEFAULT_S3_PUBLIC_BASE_URL).trim();
   if (!raw) {
     throw new Error("Public base URL is required.");
   }

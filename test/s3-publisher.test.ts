@@ -1,5 +1,5 @@
-import { buildR2Release } from "../src/release/r2-build";
-import { R2Publisher } from "../src/release/r2-publisher";
+import { buildS3Release } from "../src/release/s3-build";
+import { S3Publisher } from "../src/release/s3-publisher";
 import { createTempRepo, writeProfileEntry } from "./helpers";
 
 function createMemoryStore(existingKeys: string[] = []) {
@@ -35,7 +35,7 @@ function createMemoryStore(existingKeys: string[] = []) {
   };
 }
 
-describe("R2 publisher", () => {
+describe("S3 publisher", () => {
   test("plans HEAD-based blob skips, assigns cache headers, and updates channels last", async () => {
     const root = await createTempRepo();
     await writeProfileEntry(root, {
@@ -52,14 +52,14 @@ describe("R2 publisher", () => {
       assetFileName: "a.dcp",
       assetContent: "camera bytes\n",
     });
-    const build = await buildR2Release({
+    const build = await buildS3Release({
       rootDir: root,
       tag: "v2026.04.29",
       publicBaseUrl: "https://profiles.lumaforge.invalid",
       now: "2026-04-29T00:00:00.000Z",
     });
     const store = createMemoryStore([build.blobs[0]!.key]);
-    const publisher = new R2Publisher({
+    const publisher = new S3Publisher({
       bucket: "lumaforge-profiles",
       publicBaseUrl: "https://profiles.lumaforge.invalid",
       store,
@@ -120,7 +120,7 @@ describe("R2 publisher", () => {
       assetFileName: "shared-again.cube",
       assetContent: 'TITLE "Shared"\n',
     });
-    const build = await buildR2Release({
+    const build = await buildS3Release({
       rootDir: root,
       tag: "v2026.04.29",
       publicBaseUrl: "https://profiles.lumaforge.invalid",
@@ -130,7 +130,7 @@ describe("R2 publisher", () => {
     store.jsonObjects.set("channels/stable/release.json", {
       tag: "v2026.04.28",
     });
-    const publisher = new R2Publisher({
+    const publisher = new S3Publisher({
       bucket: "lumaforge-profiles",
       publicBaseUrl: "https://profiles.lumaforge.invalid",
       store,

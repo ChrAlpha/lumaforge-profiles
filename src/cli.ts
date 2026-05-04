@@ -9,10 +9,10 @@ import { formatValidationIssue, validateProfiles } from "./manifest/validate";
 import { PROFILE_KINDS, type ProfileKind } from "./manifest/types";
 import { buildReleaseProfiles } from "./release/build";
 import { releaseProfiles } from "./release/github";
-import { buildR2Release, loadBuiltR2Release } from "./release/r2-build";
-import { runR2Gc } from "./release/r2-gc";
-import { R2Publisher } from "./release/r2-publisher";
-import { loadR2ConfigFromEnv, R2ObjectStore } from "./release/r2-store";
+import { buildS3Release, loadBuiltS3Release } from "./release/s3-build";
+import { runS3Gc } from "./release/s3-gc";
+import { S3Publisher } from "./release/s3-publisher";
+import { loadS3ConfigFromEnv, S3ObjectStore } from "./release/s3-store";
 
 loadDotenvFiles({ cwd: process.cwd() });
 
@@ -230,20 +230,20 @@ program
   });
 
 program
-  .command("build-r2")
+  .command("build-s3")
   .description(
-    "Build Cloudflare R2/CDN release artifacts with content-addressed blobs",
+    "Build S3-compatible/CDN release artifacts with content-addressed blobs",
   )
   .requiredOption("--tag <tag>", "release tag")
   .option("--public-base-url <url>", "public CDN base URL")
   .option("--channel <name...>", "channel names to embed in release metadata")
   .option(
     "--lut-only",
-    "fail if the R2 release contains non-LUT entries",
+    "fail if the S3 release contains non-LUT entries",
     false,
   )
   .action(async (options) => {
-    const result = await buildR2Release({
+    const result = await buildS3Release({
       rootDir: process.cwd(),
       tag: options.tag,
       publicBaseUrl: options.publicBaseUrl,
@@ -251,7 +251,7 @@ program
       allowedKinds: options.lutOnly ? ["lut"] : undefined,
       now: process.env.LUMAFORGE_PROFILES_NOW,
     });
-    console.log(`wrote R2 release artifacts to ${result.outputDir}`);
+    console.log(`wrote S3 release artifacts to ${result.outputDir}`);
     console.log(`catalog: ${result.catalogPath}`);
     console.log(`release: ${result.releasePath}`);
     console.log(`entries: ${result.entries.length}`);
@@ -260,9 +260,9 @@ program
   });
 
 program
-  .command("publish-r2")
+  .command("publish-s3")
   .description(
-    "Publish a previously built R2 release to Cloudflare R2 and update channels last",
+    "Publish a previously built S3 release to an S3-compatible bucket and update channels last",
   )
   .requiredOption("--tag <tag>", "release tag")
   .option(
@@ -273,14 +273,14 @@ program
   .option("--dry-run", "print the upload plan without writing objects", false)
   .option("--yes", "execute uploads", false)
   .action(async (options) => {
-    const config = loadR2ConfigFromEnv();
-    const store = new R2ObjectStore(config);
-    const publisher = new R2Publisher({
+    const config = loadS3ConfigFromEnv();
+    const store = new S3ObjectStore(config);
+    const publisher = new S3Publisher({
       bucket: config.bucket,
       publicBaseUrl: config.publicBaseUrl,
       store,
     });
-    const build = await loadBuiltR2Release({
+    const build = await loadBuiltS3Release({
       rootDir: process.cwd(),
       tag: options.tag,
     });
@@ -306,14 +306,14 @@ program
       console.log(`${object.action}\t${object.phase}\t${object.key}`);
     }
     if (result.dryRun) {
-      console.log("dry-run: no R2 objects were uploaded");
+      console.log("dry-run: no S3 objects were uploaded");
     }
   });
 
 program
-  .command("r2-gc")
+  .command("s3-gc")
   .description(
-    "Plan or execute Cloudflare R2 garbage collection for old releases and unreferenced blobs",
+    "Plan or execute S3-compatible garbage collection for old releases and unreferenced blobs",
   )
   .option(
     "--keep-releases <count>",
@@ -329,8 +329,8 @@ program
   .option("--dry-run", "print the delete plan without removing objects", false)
   .option("--yes", "execute deletions", false)
   .action(async (options) => {
-    const config = loadR2ConfigFromEnv();
-    const store = new R2ObjectStore(config);
+    const config = loadS3ConfigFromEnv();
+    const store = new S3ObjectStore(config);
     const dryRun = options.dryRun || !options.yes;
     const keepTags =
       typeof options.keepTags === "string"
@@ -339,7 +339,7 @@ program
             .map((item: string) => item.trim())
             .filter(Boolean)
         : [];
-    const result = await runR2Gc({
+    const result = await runS3Gc({
       store,
       keepReleases: options.keepReleases,
       keepTags,
@@ -355,7 +355,7 @@ program
       console.log(`delete\t${key}`);
     }
     if (result.dryRun) {
-      console.log("dry-run: no R2 objects were deleted");
+      console.log("dry-run: no S3 objects were deleted");
     }
   });
 

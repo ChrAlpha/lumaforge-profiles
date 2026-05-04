@@ -5,24 +5,24 @@ import {
   type ReleaseCatalog,
   type ReleaseEntryDocument,
   type ReleaseMetadataDocument,
-} from "./r2-shared";
+} from "./s3-shared";
 
 type RegistryStore = Pick<ObjectStore, "getJson">;
 
-export interface PublishedR2ChannelPointer {
+export interface PublishedS3ChannelPointer {
   channel: string;
   tag: string;
   release: ReleaseMetadataDocument;
 }
 
-export interface PublishedR2ChannelState {
+export interface PublishedS3ChannelState {
   channel: string;
   tag: string;
   release: ReleaseMetadataDocument;
   catalog: ReleaseCatalog;
 }
 
-export interface PublishedR2ReleaseState {
+export interface PublishedS3ReleaseState {
   tag: string;
   release: ReleaseMetadataDocument;
   catalog: ReleaseCatalog;
@@ -30,10 +30,10 @@ export interface PublishedR2ReleaseState {
   entries: ReleaseEntryDocument[];
 }
 
-export async function loadPublishedR2ChannelPointer(
+export async function loadPublishedS3ChannelPointer(
   store: RegistryStore,
   options: { channel: string },
-): Promise<PublishedR2ChannelPointer | null> {
+): Promise<PublishedS3ChannelPointer | null> {
   const release = await store.getJson<ReleaseMetadataDocument>(
     `channels/${options.channel}/release.json`,
   );
@@ -47,11 +47,11 @@ export async function loadPublishedR2ChannelPointer(
   };
 }
 
-export async function loadPublishedR2Channel(
+export async function loadPublishedS3Channel(
   store: RegistryStore,
   options: { channel: string },
-): Promise<PublishedR2ChannelState | null> {
-  const pointer = await loadPublishedR2ChannelPointer(store, options);
+): Promise<PublishedS3ChannelState | null> {
+  const pointer = await loadPublishedS3ChannelPointer(store, options);
   if (!pointer) {
     return null;
   }
@@ -71,7 +71,7 @@ export async function loadPublishedR2Channel(
   };
 }
 
-export async function loadPublishedR2Entry(
+export async function loadPublishedS3Entry(
   store: RegistryStore,
   options: { tag: string; entryId: string },
 ): Promise<ReleaseEntryDocument | null> {
@@ -80,10 +80,10 @@ export async function loadPublishedR2Entry(
   );
 }
 
-export async function loadPublishedR2Release(
+export async function loadPublishedS3Release(
   store: RegistryStore,
   options: { tag: string; includeEntries?: boolean },
-): Promise<PublishedR2ReleaseState | null> {
+): Promise<PublishedS3ReleaseState | null> {
   const release = await store.getJson<ReleaseMetadataDocument>(
     `releases/${options.tag}/release.json`,
   );
@@ -110,7 +110,7 @@ export async function loadPublishedR2Release(
   const entries: ReleaseEntryDocument[] = [];
   if (options.includeEntries) {
     for (const entry of catalog.entries) {
-      const loaded = await loadPublishedR2Entry(store, {
+      const loaded = await loadPublishedS3Entry(store, {
         tag: options.tag,
         entryId: entry.id,
       });

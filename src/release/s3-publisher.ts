@@ -1,29 +1,29 @@
 import {
   joinPublicUrl,
   cacheControlForObjectKey,
-  type BuildR2ReleaseResult,
-  type R2ReleaseObject,
-} from "./r2-shared";
+  type BuildS3ReleaseResult,
+  type S3ReleaseObject,
+} from "./s3-shared";
 import type { ObjectStore } from "./object-store";
 import type { ProfilesPublisher } from "./publisher";
-import { loadPublishedR2ChannelPointer } from "./r2-registry";
+import { loadPublishedS3ChannelPointer } from "./s3-registry";
 
-export interface R2PublishOptions {
-  build: BuildR2ReleaseResult;
+export interface S3PublishOptions {
+  build: BuildS3ReleaseResult;
   channelNames?: string[];
   dryRun?: boolean;
 }
 
-export interface R2PublishPlanObject extends R2ReleaseObject {
+export interface S3PublishPlanObject extends S3ReleaseObject {
   action: "skip" | "upload" | "update";
 }
 
-export interface R2PublishPlan {
+export interface S3PublishPlan {
   tag: string;
   bucket: string;
   publicBaseUrl: string;
   dryRun: boolean;
-  objects: R2PublishPlanObject[];
+  objects: S3PublishPlanObject[];
   channelUpdates: Array<{
     channel: string;
     previousTag: string | null;
@@ -33,29 +33,29 @@ export interface R2PublishPlan {
   estimatedClassBOperations: number;
 }
 
-export interface R2PublishResult extends R2PublishPlan {
+export interface S3PublishResult extends S3PublishPlan {
   uploadedBlobCount: number;
   skippedBlobCount: number;
 }
 
-export interface R2PublisherOptions {
+export interface S3PublisherOptions {
   bucket: string;
   publicBaseUrl: string;
   store: Pick<ObjectStore, "headObject" | "putObject" | "getJson">;
 }
 
-export class R2Publisher implements ProfilesPublisher<
-  R2PublishPlan,
-  R2PublishResult,
-  R2PublishOptions
+export class S3Publisher implements ProfilesPublisher<
+  S3PublishPlan,
+  S3PublishResult,
+  S3PublishOptions
 > {
-  constructor(private readonly options: R2PublisherOptions) {}
+  constructor(private readonly options: S3PublisherOptions) {}
 
-  private channelObjects(build: BuildR2ReleaseResult, channelNames: string[]) {
+  private channelObjects(build: BuildS3ReleaseResult, channelNames: string[]) {
     const uniqueChannels = [
       ...new Set(channelNames.map((value) => value.trim()).filter(Boolean)),
     ];
-    const objects: R2ReleaseObject[] = [];
+    const objects: S3ReleaseObject[] = [];
     const updates = uniqueChannels.map((channel) => ({
       channel,
       previousTag: null as string | null,
@@ -100,15 +100,15 @@ export class R2Publisher implements ProfilesPublisher<
     };
   }
 
-  async plan(options: R2PublishOptions): Promise<R2PublishPlan> {
+  async plan(options: S3PublishOptions): Promise<S3PublishPlan> {
     const channelState = this.channelObjects(
       options.build,
       options.channelNames ?? [],
     );
-    const objects: R2PublishPlanObject[] = [];
+    const objects: S3PublishPlanObject[] = [];
     let classBOperations = 0;
     for (const update of channelState.updates) {
-      const current = await loadPublishedR2ChannelPointer(this.options.store, {
+      const current = await loadPublishedS3ChannelPointer(this.options.store, {
         channel: update.channel,
       });
       update.previousTag = current?.tag ?? null;
@@ -147,8 +147,8 @@ export class R2Publisher implements ProfilesPublisher<
   }
 
   async publish(
-    options: R2PublishOptions & { dryRun: boolean },
-  ): Promise<R2PublishResult> {
+    options: S3PublishOptions & { dryRun: boolean },
+  ): Promise<S3PublishResult> {
     const plan = await this.plan(options);
     if (!options.dryRun) {
       for (const object of plan.objects) {

@@ -1,17 +1,17 @@
 import type { ObjectStore } from "./object-store";
 
-export interface PlanR2GcOptions {
+export interface PlanS3GcOptions {
   store: Pick<ObjectStore, "listObjects" | "getJson" | "deleteObjects">;
   keepReleases?: number;
   keepTags?: string[];
   channelNames?: string[];
 }
 
-export interface RunR2GcOptions extends PlanR2GcOptions {
+export interface RunS3GcOptions extends PlanS3GcOptions {
   dryRun?: boolean;
 }
 
-export interface R2GcPlan {
+export interface S3GcPlan {
   keepTags: string[];
   releaseTagsToDelete: string[];
   deleteKeys: string[];
@@ -25,7 +25,7 @@ function releaseTagFromKey(key: string) {
   return match?.[1] ?? null;
 }
 
-export async function planR2Gc(options: PlanR2GcOptions): Promise<R2GcPlan> {
+export async function planS3Gc(options: PlanS3GcOptions): Promise<S3GcPlan> {
   const keepCount = Math.max(0, options.keepReleases ?? 0);
   const explicitKeepTags = new Set(
     (options.keepTags ?? []).map((value) => value.trim()).filter(Boolean),
@@ -126,10 +126,10 @@ export async function planR2Gc(options: PlanR2GcOptions): Promise<R2GcPlan> {
   };
 }
 
-export async function runR2Gc(
-  options: RunR2GcOptions,
-): Promise<R2GcPlan & { dryRun: boolean }> {
-  const plan = await planR2Gc(options);
+export async function runS3Gc(
+  options: RunS3GcOptions,
+): Promise<S3GcPlan & { dryRun: boolean }> {
+  const plan = await planS3Gc(options);
   const dryRun = options.dryRun ?? true;
   if (!dryRun && plan.deleteKeys.length > 0) {
     await options.store.deleteObjects(plan.deleteKeys);

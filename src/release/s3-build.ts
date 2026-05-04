@@ -24,7 +24,7 @@ import {
   releaseEntryKey,
   selectPrimaryAsset,
   type BlobReference,
-  type BuildR2ReleaseResult,
+  type BuildS3ReleaseResult,
   type BuiltBlob,
   type BuiltReleaseEntryFile,
   type CatalogEntryDocument,
@@ -32,11 +32,11 @@ import {
   type ReleaseCatalog,
   type ReleaseEntryDocument,
   type ReleaseMetadataDocument,
-  type R2PublishPlanDocument,
-  type R2ReleaseObject,
-} from "./r2-shared";
+  type S3PublishPlanDocument,
+  type S3ReleaseObject,
+} from "./s3-shared";
 
-export interface BuildR2ReleaseOptions {
+export interface BuildS3ReleaseOptions {
   rootDir: string;
   tag: string;
   publicBaseUrl?: string;
@@ -66,6 +66,10 @@ async function checksumLine(target: ChecksumTarget) {
   };
 }
 
+function publicBaseUrlFromEnv() {
+  return process.env.S3_PUBLIC_BASE_URL?.trim();
+}
+
 function buildEntryDocument(params: {
   manifest: ProfileManifest;
   manifestPath: string;
@@ -83,12 +87,12 @@ function buildEntryDocument(params: {
   };
 }
 
-export async function buildR2Release(
-  options: BuildR2ReleaseOptions,
-): Promise<BuildR2ReleaseResult> {
+export async function buildS3Release(
+  options: BuildS3ReleaseOptions,
+): Promise<BuildS3ReleaseResult> {
   const generatedAt = options.now ?? nowIso();
   const publicBaseUrl = normalizePublicBaseUrl(
-    options.publicBaseUrl ?? process.env.CLOUDFLARE_R2_PUBLIC_BASE_URL,
+    options.publicBaseUrl ?? publicBaseUrlFromEnv(),
   );
   const channelNames = [
     ...new Set(
@@ -114,7 +118,7 @@ export async function buildR2Release(
   const outputDir = path.join(
     options.rootDir,
     "dist",
-    "r2-release",
+    "s3-release",
     options.tag,
   );
   const entriesDir = path.join(outputDir, "entries");
@@ -280,7 +284,7 @@ export async function buildR2Release(
     relativePath: "blobs-manifest.json",
   });
 
-  const objects: R2ReleaseObject[] = [];
+  const objects: S3ReleaseObject[] = [];
   for (const blob of blobs) {
     objects.push({
       phase: "blob",
@@ -344,7 +348,7 @@ export async function buildR2Release(
     },
   );
 
-  const publishPlan: R2PublishPlanDocument = {
+  const publishPlan: S3PublishPlanDocument = {
     schemaVersion: 1,
     tag: options.tag,
     generatedAt,
@@ -395,18 +399,18 @@ export async function buildR2Release(
   };
 }
 
-export interface LoadBuiltR2ReleaseOptions {
+export interface LoadBuiltS3ReleaseOptions {
   rootDir: string;
   tag: string;
 }
 
-export async function loadBuiltR2Release(
-  options: LoadBuiltR2ReleaseOptions,
-): Promise<BuildR2ReleaseResult> {
+export async function loadBuiltS3Release(
+  options: LoadBuiltS3ReleaseOptions,
+): Promise<BuildS3ReleaseResult> {
   const outputDir = path.join(
     options.rootDir,
     "dist",
-    "r2-release",
+    "s3-release",
     options.tag,
   );
   const catalogPath = path.join(outputDir, "catalog.json");
@@ -423,7 +427,7 @@ export async function loadBuiltR2Release(
   ]) {
     if (!(await fs.pathExists(filePath))) {
       throw new Error(
-        `Missing built R2 release artifact ${filePath}. Run profiles build-r2 first.`,
+        `Missing built S3 release artifact ${filePath}. Run profiles build-s3 first.`,
       );
     }
   }
@@ -431,12 +435,12 @@ export async function loadBuiltR2Release(
   const catalog = await readJsonFile<ReleaseCatalog>(catalogPath);
   const release = await readJsonFile<ReleaseMetadataDocument>(releasePath);
   const blobsManifest =
-    await readJsonFile<BuildR2ReleaseResult["blobsManifest"]>(
+    await readJsonFile<BuildS3ReleaseResult["blobsManifest"]>(
       blobsManifestPath,
     );
   const publishPlan =
-    await readJsonFile<R2PublishPlanDocument>(publishPlanPath);
-  const objects: R2ReleaseObject[] = publishPlan.objects.map((object) => ({
+    await readJsonFile<S3PublishPlanDocument>(publishPlanPath);
+  const objects: S3ReleaseObject[] = publishPlan.objects.map((object) => ({
     phase: object.phase,
     key: object.key,
     url: object.url,
@@ -448,7 +452,7 @@ export async function loadBuiltR2Release(
   const blobs: BuiltBlob[] = blobsManifest.blobs.map((blob) => {
     const object = objects.find((candidate) => candidate.key === blob.key);
     if (!object) {
-      throw new Error(`Built R2 release is missing blob object ${blob.key}.`);
+      throw new Error(`Built S3 release is missing blob object ${blob.key}.`);
     }
     return {
       key: blob.key,

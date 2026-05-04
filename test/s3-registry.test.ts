@@ -1,8 +1,8 @@
 import {
-  loadPublishedR2Channel,
-  loadPublishedR2Entry,
-  loadPublishedR2Release,
-} from "../src/release/r2-registry";
+  loadPublishedS3Channel,
+  loadPublishedS3Entry,
+  loadPublishedS3Release,
+} from "../src/release/s3-registry";
 
 function json(value: unknown) {
   return JSON.stringify(value, null, 2);
@@ -19,7 +19,7 @@ function createRegistryStore(seed: Record<string, string>) {
   };
 }
 
-describe("published R2 registry reader", () => {
+describe("published S3 registry reader", () => {
   test("loads the current channel state from bucket-managed catalog and release pointers", async () => {
     const store = createRegistryStore({
       "channels/stable/release.json": json({
@@ -65,7 +65,7 @@ describe("published R2 registry reader", () => {
       }),
     });
 
-    const channel = await loadPublishedR2Channel(store, { channel: "stable" });
+    const channel = await loadPublishedS3Channel(store, { channel: "stable" });
 
     expect(channel).toMatchObject({
       channel: "stable",
@@ -188,11 +188,11 @@ describe("published R2 registry reader", () => {
       }),
     });
 
-    const release = await loadPublishedR2Release(store, {
+    const release = await loadPublishedS3Release(store, {
       tag: "v2026.05.01",
       includeEntries: true,
     });
-    const entry = await loadPublishedR2Entry(store, {
+    const entry = await loadPublishedS3Entry(store, {
       tag: "v2026.05.01",
       entryId: "org.lumaforge.lut.a",
     });

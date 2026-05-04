@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "LumaForge Profiles R2 Blob Manifest",
+  "title": "LumaForge Profiles S3 Blob Manifest",
   "type": "object",
   "required": [
     "schemaVersion",

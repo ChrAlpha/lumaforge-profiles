@@ -1,4 +1,5 @@
 import { createReadStream } from "node:fs";
+import { stat } from "node:fs/promises";
 
 import {
   DeleteObjectsCommand,
@@ -10,51 +11,87 @@ import {
 } from "@aws-sdk/client-s3";
 
 import type { ObjectStore, PutObjectInput } from "./object-store";
-import { DEFAULT_R2_PUBLIC_BASE_URL } from "./r2-shared";
+import { DEFAULT_S3_PUBLIC_BASE_URL } from "./s3-shared";
 
-export interface R2Config {
-  accountId: string;
+export interface S3Config {
   bucket: string;
-  endpoint: string;
+  endpoint?: string;
+  region: string;
   accessKeyId: string;
   secretAccessKey: string;
+  sessionToken?: string;
   publicBaseUrl: string;
+  forcePathStyle: boolean;
 }
 
-function requiredEnv(name: string) {
-  const value = process.env[name]?.trim();
+function envValue(...names: string[]) {
+  for (const name of names) {
+    const value = process.env[name]?.trim();
+    if (value) {
+      return value;
+    }
+  }
+  return undefined;
+}
+
+function requiredEnv(...names: string[]) {
+  const value = envValue(...names);
   if (!value) {
-    throw new Error(`Missing required environment variable ${name}.`);
+    const label =
+      names.length === 1
+        ? names[0]
+        : `${names.slice(0, -1).join(", ")} or ${names.at(-1)}`;
+    throw new Error(`Missing required environment variable ${label}.`);
   }
   return value;
 }
 
-export function loadR2ConfigFromEnv(): R2Config {
-  const accountId = requiredEnv("CLOUDFLARE_ACCOUNT_ID");
+function booleanEnv(name: string) {
+  const value = envValue(name);
+  if (!value) {
+    return false;
+  }
+  if (/^(1|true|yes|on)$/i.test(value)) {
+    return true;
+  }
+  if (/^(0|false|no|off)$/i.test(value)) {
+    return false;
+  }
+  throw new Error(
+    `${name} must be one of true, false, 1, 0, yes, no, on, or off.`,
+  );
+}
+
+export function loadS3ConfigFromEnv(): S3Config {
   return {
-    accountId,
-    bucket: requiredEnv("CLOUDFLARE_R2_BUCKET"),
-    endpoint:
-      process.env.CLOUDFLARE_R2_ENDPOINT?.trim() ||
-      `https://${accountId}.r2.cloudflarestorage.com`,
-    accessKeyId: requiredEnv("CLOUDFLARE_R2_ACCESS_KEY_ID"),
-    secretAccessKey: requiredEnv("CLOUDFLARE_R2_SECRET_ACCESS_KEY"),
-    publicBaseUrl:
-      process.env.CLOUDFLARE_R2_PUBLIC_BASE_URL?.trim() ||
-      DEFAULT_R2_PUBLIC_BASE_URL,
+    bucket: requiredEnv("S3_BUCKET"),
+    endpoint: envValue("S3_ENDPOINT"),
+    region:
+      envValue("S3_REGION", "AWS_REGION", "AWS_DEFAULT_REGION") ??
+      "us-east-1",
+    accessKeyId: requiredEnv("S3_ACCESS_KEY_ID", "AWS_ACCESS_KEY_ID"),
+    secretAccessKey: requiredEnv(
+      "S3_SECRET_ACCESS_KEY",
+      "AWS_SECRET_ACCESS_KEY",
+    ),
+    sessionToken: envValue("S3_SESSION_TOKEN", "AWS_SESSION_TOKEN"),
+    publicBaseUrl: envValue("S3_PUBLIC_BASE_URL") ?? DEFAULT_S3_PUBLIC_BASE_URL,
+    forcePathStyle: booleanEnv("S3_FORCE_PATH_STYLE"),
   };
 }
 
-export class R2ObjectStore implements ObjectStore {
+export class S3ObjectStore implements ObjectStore {
   private readonly client: S3Client;
 
-  constructor(private readonly config: R2Config) {
+  constructor(private readonly config: S3Config) {
     this.client = new S3Client({
-      region: "auto",
+      region: config.region,
       endpoint: config.endpoint,
+      forcePathStyle: config.forcePathStyle,
       credentials: {
         accessKeyId: config.accessKeyId,
         secretAccessKey: config.secretAccessKey,
+        sessionToken: config.sessionToken,
       },
     });
   }
@@ -81,11 +118,13 @@ export class R2ObjectStore implements ObjectStore {
   }
 
   async putObject(input: PutObjectInput) {
+    const { size } = await stat(input.bodyPath);
     await this.client.send(
       new PutObjectCommand({
         Bucket: this.config.bucket,
         Key: input.key,
         Body: createReadStream(input.bodyPath),
+        ContentLength: size,
         ContentType: input.contentType,
         CacheControl: input.cacheControl,
       }),
