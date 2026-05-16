@@ -1,11 +1,11 @@
 import { describe, expect, test } from "vitest";
 
-import { buildBrowserReleasePackage, buildBrowserS3ReleasePlan } from "../src/web/release";
+import { buildBrowserReleasePackage, buildBrowserS3ReleasePlan } from "../release";
 import {
   addLutUploadBatch,
   createWebProfilesWorkspace,
   type WebWorkspaceEntry,
-} from "../src/web/workspace";
+} from "../workspace";
 
 function carriedEntry(id: string, title: string, sha256: string): WebWorkspaceEntry {
   return {

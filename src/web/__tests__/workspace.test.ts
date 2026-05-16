@@ -6,7 +6,7 @@ import {
   exportPersistableWorkspace,
   restorePersistedWorkspace,
   type WebWorkspaceEntry,
-} from "../src/web/workspace";
+} from "../workspace";
 
 function carriedEntry(id: string, title: string): WebWorkspaceEntry {
   return {

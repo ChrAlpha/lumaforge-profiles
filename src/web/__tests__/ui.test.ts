@@ -1,11 +1,11 @@
 import { describe, expect, test } from "vitest";
 
-import { renderWorkspaceShell } from "../src/web/ui";
+import { renderWorkspaceShell } from "../ui";
 import {
   addLutUploadBatch,
   createWebProfilesWorkspace,
   type WebWorkspaceEntry,
-} from "../src/web/workspace";
+} from "../workspace";
 
 function carriedEntry(id: string, title: string): WebWorkspaceEntry {
   return {

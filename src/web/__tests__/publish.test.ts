@@ -4,8 +4,8 @@ import {
   publishBrowserGithubRelease,
   publishBrowserS3ReleasePackage,
   type BrowserS3PublishTransport,
-} from "../src/web/publish";
-import type { BrowserReleasePackage } from "../src/web/release";
+} from "../publish";
+import type { BrowserReleasePackage } from "../release";
 
 function releasePackage(): BrowserReleasePackage {
   return {
