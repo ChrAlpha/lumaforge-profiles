@@ -15,6 +15,6 @@ describe("test layout", () => {
     expect(fs.existsSync(path.join(rootDir, "src", "web", "__tests__", "workspace.test.ts"))).toBe(true);
     expect(fs.existsSync(path.join(rootDir, "src", "web", "__tests__", "release.test.ts"))).toBe(true);
     expect(fs.existsSync(path.join(rootDir, "src", "web", "__tests__", "publish.test.ts"))).toBe(true);
-    expect(fs.existsSync(path.join(rootDir, "src", "web", "__tests__", "ui.test.ts"))).toBe(true);
+    expect(fs.existsSync(path.join(rootDir, "src", "web", "__tests__", "ui.test.tsx"))).toBe(true);
   });
 });
