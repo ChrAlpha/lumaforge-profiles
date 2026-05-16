@@ -47,7 +47,7 @@ export function SecretField({
         <button
           type="button"
           aria-pressed={revealed}
-          aria-label={revealed ? "Hide" : "Show"}
+          aria-label={`${revealed ? "Hide" : "Show"} ${label}`}
           className={toggleClass}
           onClick={() => setRevealed((prev) => !prev)}
         >
