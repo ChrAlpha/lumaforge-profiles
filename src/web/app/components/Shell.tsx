@@ -18,7 +18,8 @@ export interface ShellProps {
   onPublishGithub: () => void;
 }
 
-const navLink = "block py-1 text-sm text-ink-soft hover:text-accent";
+const navLink =
+  "block rounded px-2 py-1.5 text-sm text-ink-soft transition-colors hover:bg-paper hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent";
 
 export function Shell(props: ShellProps) {
   const { workspace } = props;
@@ -28,11 +29,11 @@ export function Shell(props: ShellProps) {
       data-app-root
       className="grid min-h-screen grid-cols-1 bg-paper text-ink lg:grid-cols-[16rem_1fr]"
     >
-      <aside className="border-b border-line bg-surface p-6 lg:border-b-0 lg:border-r">
-        <h1 className="text-xl font-semibold text-ink">
+      <aside className="border-b border-line bg-surface p-6 lg:border-b-0 lg:border-r lg:p-8">
+        <h1 className="text-xl font-semibold tracking-tight text-ink">
           LumaForge Profiles Studio
         </h1>
-        <nav className="mt-4">
+        <nav className="mt-6 space-y-0.5">
           <a href="#library" className={navLink}>
             Library
           </a>
@@ -46,11 +47,11 @@ export function Shell(props: ShellProps) {
             Publish
           </a>
         </nav>
-        <p className="mt-6 text-xs text-ink-soft">
+        <p className="mt-8 border-l-2 border-positive pl-3 text-xs leading-relaxed text-ink-soft">
           Credentials stay in memory only.
         </p>
       </aside>
-      <main className="space-y-6 p-6">
+      <main className="space-y-6 p-6 lg:p-8">
         <LibraryPanel
           workspace={workspace}
           onLoadBaseline={props.onLoadBaseline}

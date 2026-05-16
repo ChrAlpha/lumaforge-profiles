@@ -8,7 +8,7 @@ export interface LibraryPanelProps {
 }
 
 const actionButton =
-  "rounded border border-line bg-surface px-3 py-1.5 text-sm text-ink hover:border-accent hover:text-accent";
+  "rounded-md border border-line bg-surface px-3.5 py-2 text-sm font-medium text-ink transition-colors hover:border-accent hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent";
 
 export function LibraryPanel({
   workspace,
@@ -17,14 +17,14 @@ export function LibraryPanel({
 }: LibraryPanelProps) {
   return (
     <section id="library" className="rounded-lg border border-line bg-surface p-6">
-      <header className="mb-4">
-        <h2 className="text-lg font-semibold text-ink">Library</h2>
-        <p className="text-sm text-ink-soft">
+      <header className="mb-5">
+        <h2 className="text-lg font-semibold tracking-tight text-ink">Library</h2>
+        <p className="mt-1 text-sm leading-relaxed text-ink-soft">
           {workspace.entries.length} LUT entries across baseline and uploaded
           batches.
         </p>
       </header>
-      <div className="mb-4 flex gap-2">
+      <div className="mb-6 flex flex-wrap gap-2">
         <button type="button" className={actionButton} onClick={onLoadBaseline}>
           Load baseline
         </button>
@@ -32,8 +32,10 @@ export function LibraryPanel({
           Upload LUTs
         </button>
       </div>
-      <h3 className="mb-2 text-sm font-medium text-ink">Upload batches</h3>
-      <ul aria-label="Upload batches" className="mb-4 space-y-1 text-sm text-ink-soft">
+      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-soft">
+        Upload batches
+      </h3>
+      <ul aria-label="Upload batches" className="mb-6 space-y-1 text-sm text-ink-soft">
         {workspace.batches.length === 0 ? (
           <li>No upload batches yet</li>
         ) : (

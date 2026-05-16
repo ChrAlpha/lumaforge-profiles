@@ -8,7 +8,7 @@ export interface MetadataPanelProps {
 }
 
 const tabTrigger =
-  "shrink-0 rounded border border-line bg-surface px-3 py-1 text-xs text-ink-soft outline-none hover:border-accent hover:text-accent focus:border-accent data-[state=active]:border-accent data-[state=active]:text-accent";
+  "shrink-0 rounded-md border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink-soft transition-colors hover:border-accent hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent data-[state=active]:border-accent data-[state=active]:text-accent";
 
 export function MetadataPanel({ workspace }: MetadataPanelProps) {
   const { entries } = workspace;
@@ -26,13 +26,15 @@ export function MetadataPanel({ workspace }: MetadataPanelProps) {
 
   return (
     <section id="metadata" className="rounded-lg border border-line bg-surface p-6">
-      <header className="mb-4">
-        <h2 className="text-lg font-semibold text-ink">Metadata</h2>
-        <p className="text-sm text-ink-soft">
+      <header className="mb-5">
+        <h2 className="text-lg font-semibold tracking-tight text-ink">Metadata</h2>
+        <p className="mt-1 text-sm leading-relaxed text-ink-soft">
           Review generated fields before publishing.
         </p>
       </header>
-      <h3 className="mb-2 text-sm font-medium text-ink">Manifest preview</h3>
+      <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-ink-soft">
+        Manifest preview
+      </h3>
       {entries.length > 0 ? (
         <Tabs.Root
           value={selected?.id}
@@ -55,14 +57,14 @@ export function MetadataPanel({ workspace }: MetadataPanelProps) {
           </Tabs.List>
           {selected ? (
             <Tabs.Content value={selected.id} forceMount>
-              <pre className="overflow-auto rounded border border-line bg-paper p-4 font-mono text-xs text-ink">
+              <pre className="max-h-80 overflow-auto rounded-md border border-line bg-paper p-4 font-mono text-xs leading-relaxed text-ink">
                 {manifestPreview}
               </pre>
             </Tabs.Content>
           ) : null}
         </Tabs.Root>
       ) : (
-        <pre className="overflow-auto rounded border border-line bg-paper p-4 font-mono text-xs text-ink">
+        <pre className="max-h-80 overflow-auto rounded-md border border-line bg-paper p-4 font-mono text-xs leading-relaxed text-ink">
           {manifestPreview}
         </pre>
       )}

@@ -9,9 +9,9 @@ export interface SecretFieldProps {
 }
 
 const inputClass =
-  "mt-1 w-full rounded border border-line bg-paper px-3 py-1.5 pr-16 text-sm text-ink outline-none focus:border-accent";
+  "mt-1.5 w-full rounded-md border border-line bg-paper px-3 py-2 pr-16 text-sm text-ink outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent";
 const toggleClass =
-  "absolute bottom-1 right-1 rounded border border-line bg-surface px-2 py-1 text-xs text-ink-soft outline-none hover:border-accent hover:text-accent focus:border-accent";
+  "absolute bottom-1 right-1 rounded border border-line bg-surface px-2 py-1 text-xs font-medium text-ink-soft transition-colors hover:border-accent hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent";
 
 /**
  * Controlled masked credential input with a local-only show/hide toggle.
@@ -31,7 +31,7 @@ export function SecretField({
 
   return (
     <div>
-      <label htmlFor={id} className="block text-sm text-ink-soft">
+      <label htmlFor={id} className="block text-sm font-medium text-ink-soft">
         {label}
       </label>
       <div className="relative">

@@ -27,7 +27,7 @@ const variantClass: Record<StatusToastVariant, string> = {
   error: "border-accent text-accent",
 };
 const closeButton =
-  "ml-3 rounded border border-line bg-surface px-2 py-0.5 text-xs text-ink-soft hover:border-accent hover:text-accent";
+  "ml-3 rounded border border-line bg-surface px-2 py-0.5 text-xs font-medium text-ink-soft transition-colors hover:border-accent hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent";
 
 /**
  * Wraps the app in a Radix Toast region and exposes an imperative `notify`.

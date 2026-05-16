@@ -8,9 +8,9 @@ export interface EntryTableProps {
 }
 
 const tooltipContent =
-  "max-w-xs rounded border border-line bg-surface px-3 py-2 text-xs text-ink shadow-lg";
+  "max-w-xs rounded-md border border-line bg-surface px-3 py-2 text-xs leading-relaxed text-ink shadow-lg";
 const warningTrigger =
-  "rounded border border-accent px-2 py-0.5 text-xs text-accent outline-none hover:bg-paper focus:border-accent";
+  "rounded border border-accent px-2 py-0.5 text-xs font-medium text-accent transition-colors hover:bg-paper focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent";
 
 function WarningsCell({ entry }: { entry: WebWorkspaceEntry }) {
   const { warnings } = entry.review;
@@ -48,12 +48,12 @@ export function EntryTable({ entries }: EntryTableProps) {
     <Tooltip.Provider delayDuration={0} disableHoverableContent>
       <table className="w-full border-collapse text-sm">
         <thead>
-          <tr className="border-b border-line text-left text-ink-soft">
-            <th className="py-2 pr-4 font-medium">Title</th>
-            <th className="py-2 pr-4 font-medium">Status</th>
-            <th className="py-2 pr-4 font-medium">Batch</th>
-            <th className="py-2 pr-4 font-medium">SHA-256</th>
-            <th className="py-2 font-medium">Review</th>
+          <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-ink-soft">
+            <th className="py-2.5 pr-4 font-semibold">Title</th>
+            <th className="py-2.5 pr-4 font-semibold">Status</th>
+            <th className="py-2.5 pr-4 font-semibold">Batch</th>
+            <th className="py-2.5 pr-4 font-semibold">SHA-256</th>
+            <th className="py-2.5 font-semibold">Review</th>
           </tr>
         </thead>
         <tbody>
@@ -61,17 +61,17 @@ export function EntryTable({ entries }: EntryTableProps) {
             const asset = entry.manifest.assets[0];
             return (
               <tr key={entry.id} className="border-b border-line/60 align-top">
-                <td className="py-2 pr-4 text-ink">{entry.manifest.title}</td>
-                <td className="py-2 pr-4">
+                <td className="py-2.5 pr-4 font-medium text-ink">{entry.manifest.title}</td>
+                <td className="py-2.5 pr-4">
                   <StatusBadge status={entry.status} />
                 </td>
-                <td className="py-2 pr-4 text-ink-soft">
+                <td className="py-2.5 pr-4 text-ink-soft">
                   {entry.batchId ?? "baseline"}
                 </td>
-                <td className="py-2 pr-4 font-mono text-xs text-ink-soft">
+                <td className="py-2.5 pr-4 font-mono text-xs text-ink-soft">
                   {asset?.sha256.slice(0, 12) ?? ""}
                 </td>
-                <td className="py-2 text-ink-soft">
+                <td className="py-2.5 text-ink-soft">
                   <WarningsCell entry={entry} />
                 </td>
               </tr>

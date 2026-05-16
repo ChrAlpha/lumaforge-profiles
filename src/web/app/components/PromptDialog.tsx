@@ -30,11 +30,11 @@ const overlay =
 const panel =
   "fixed left-1/2 top-1/2 w-[min(28rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 rounded-lg border border-line bg-surface p-6 text-ink shadow-xl";
 const inputClass =
-  "mt-1 w-full rounded border border-line bg-paper px-3 py-1.5 text-sm text-ink outline-none focus:border-accent";
+  "mt-1.5 w-full rounded-md border border-line bg-paper px-3 py-2 text-sm text-ink outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent";
 const ghostButton =
-  "rounded border border-line bg-surface px-3 py-1.5 text-sm text-ink hover:border-accent hover:text-accent";
+  "rounded-md border border-line bg-surface px-3.5 py-2 text-sm font-medium text-ink transition-colors hover:border-accent hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent";
 const primaryButton =
-  "rounded border border-line bg-surface px-3 py-1.5 text-sm text-positive hover:border-accent disabled:cursor-not-allowed disabled:opacity-50";
+  "rounded-md border border-line bg-surface px-3.5 py-2 text-sm font-medium text-positive transition-colors hover:border-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-50";
 
 export function PromptDialog({
   open,
@@ -88,17 +88,17 @@ export function PromptDialog({
       <Dialog.Portal>
         <Dialog.Overlay className={overlay} />
         <Dialog.Content className={panel} aria-describedby={undefined}>
-          <Dialog.Title className="text-lg font-semibold text-ink">
+          <Dialog.Title className="text-lg font-semibold tracking-tight text-ink">
             {title}
           </Dialog.Title>
-          <form className="mt-4 space-y-4" onSubmit={handleSubmit}>
+          <form className="mt-5 space-y-4" onSubmit={handleSubmit}>
             {fields.map((field, index) => {
               const fieldId = `${baseId}-${field.name}`;
               return (
                 <div key={field.name}>
                   <label
                     htmlFor={fieldId}
-                    className="block text-sm text-ink-soft"
+                    className="block text-sm font-medium text-ink-soft"
                   >
                     {field.label}
                   </label>
