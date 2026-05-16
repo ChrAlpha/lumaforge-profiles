@@ -8,6 +8,18 @@ import {
   createWebProfilesWorkspace,
   exportPersistableWorkspace,
 } from "../workspace";
+import { buildBrowserReleasePackage } from "../release";
+import { publishBrowserS3ReleasePackage } from "../publish";
+
+vi.mock("../release", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../release")>();
+  return { ...actual, buildBrowserReleasePackage: vi.fn() };
+});
+
+vi.mock("../publish", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../publish")>();
+  return { ...actual, publishBrowserS3ReleasePackage: vi.fn() };
+});
 
 const STORAGE_KEY = "lumaforge-profiles-workspace-v1";
 
@@ -208,5 +220,52 @@ describe("App", () => {
 
     promptSpy.mockRestore();
     fetchSpy.mockRestore();
+  });
+
+  it("publishes to S3/R2 even when the region field is cleared (legacy parity)", async () => {
+    const user = userEvent.setup();
+
+    vi.mocked(buildBrowserReleasePackage).mockReturnValue({
+      tag: "v2026.05.16",
+    } as unknown as ReturnType<typeof buildBrowserReleasePackage>);
+    vi.mocked(publishBrowserS3ReleasePackage).mockResolvedValue({
+      uploaded: ["a"],
+      skipped: [],
+    } as unknown as Awaited<
+      ReturnType<typeof publishBrowserS3ReleasePackage>
+    >);
+
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: "Publish S3/R2" }));
+
+    // First dialog: release package details (tag + public base URL defaults).
+    await screen.findByRole("dialog", { name: "Release package details" });
+    await user.click(screen.getByRole("button", { name: "Submit" }));
+
+    // Second dialog: S3/R2 destination + credentials.
+    await screen.findByRole("dialog", { name: "Publish to S3/R2" });
+    await user.type(screen.getByLabelText("S3/R2 bucket"), "my-bucket");
+    // Clear the region field so it submits empty (must NOT block).
+    await user.clear(screen.getByLabelText("S3 region"));
+    await user.type(
+      screen.getByLabelText("S3/R2 access key id"),
+      "AKIA-TEST",
+    );
+    await user.type(
+      screen.getByLabelText("S3/R2 secret access key"),
+      "secret-test",
+    );
+    await user.click(screen.getByRole("button", { name: "Submit" }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/Published S3\/R2 release: uploaded 1, skipped 0\./),
+      ).toBeInTheDocument();
+    });
+    expect(publishBrowserS3ReleasePackage).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ bucket: "my-bucket", region: "" }),
+    );
   });
 });

@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { PromptDialog, type PromptField } from "./PromptDialog";
 
@@ -39,11 +39,28 @@ export function usePromptDialog(): {
   const settle = useCallback(
     (values: Record<string, string> | null) => {
       const current = pendingRef.current;
+      // No-op when nothing is pending so a cancel-then-submit (or any repeat
+      // settle) can never double-resolve the same promise.
+      if (current === null) {
+        return;
+      }
+      pendingRef.current = null;
       setPending(null);
-      current?.resolve(values);
+      current.resolve(values);
     },
     [],
   );
+
+  // If the hook unmounts while a prompt is still open, settle the pending
+  // promise with `null` (same as a cancel) so the awaiting caller never leaks
+  // an unresolved Promise. Ref-indirection keeps the cleanup mount-scoped.
+  const settleRef = useRef(settle);
+  settleRef.current = settle;
+  useEffect(() => {
+    return () => {
+      settleRef.current(null);
+    };
+  }, []);
 
   const dialog = (
     <PromptDialog

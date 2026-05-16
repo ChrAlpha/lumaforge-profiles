@@ -366,7 +366,12 @@ export function App() {
       title: "Publish to S3/R2",
       fields: [
         { name: "bucket", label: "S3/R2 bucket" },
-        { name: "region", label: "S3 region", defaultValue: "auto" },
+        {
+          name: "region",
+          label: "S3 region",
+          defaultValue: "auto",
+          required: false,
+        },
         {
           name: "endpoint",
           label: "S3/R2 endpoint URL",

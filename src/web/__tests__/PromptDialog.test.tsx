@@ -1,8 +1,10 @@
+import { useEffect, useRef } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { PromptDialog } from "../app/components/PromptDialog";
+import { usePromptDialog } from "../app/components/usePromptDialog";
 
 describe("PromptDialog", () => {
   afterEach(() => {
@@ -157,5 +159,69 @@ describe("PromptDialog", () => {
     );
 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+});
+
+describe("usePromptDialog", () => {
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+  });
+
+  function Harness({
+    onResolved,
+  }: {
+    onResolved: (value: Record<string, string> | null) => void;
+  }) {
+    const { prompt, dialog } = usePromptDialog();
+    const startedRef = useRef(false);
+    useEffect(() => {
+      if (startedRef.current) {
+        return;
+      }
+      startedRef.current = true;
+      void prompt({
+        title: "Pending prompt",
+        fields: [{ name: "x", label: "X" }],
+      }).then(onResolved);
+    }, [prompt, onResolved]);
+    return <>{dialog}</>;
+  }
+
+  it("resolves a still-open prompt with null when the hook unmounts", async () => {
+    const onResolved = vi.fn();
+    const { unmount } = render(<Harness onResolved={onResolved} />);
+
+    expect(
+      await screen.findByRole("dialog", { name: "Pending prompt" }),
+    ).toBeInTheDocument();
+    expect(onResolved).not.toHaveBeenCalled();
+
+    unmount();
+
+    await vi.waitFor(() => {
+      expect(onResolved).toHaveBeenCalledTimes(1);
+    });
+    expect(onResolved).toHaveBeenCalledWith(null);
+  });
+
+  it("cannot double-settle: cancel then a stray settle stays single", async () => {
+    const user = userEvent.setup();
+    const onResolved = vi.fn();
+    const { unmount } = render(<Harness onResolved={onResolved} />);
+
+    await screen.findByRole("dialog", { name: "Pending prompt" });
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+    await vi.waitFor(() => {
+      expect(onResolved).toHaveBeenCalledTimes(1);
+    });
+    expect(onResolved).toHaveBeenCalledWith(null);
+
+    // Unmount triggers the cleanup settle; the pending request is already
+    // cleared so it must NOT resolve the promise a second time.
+    unmount();
+    await Promise.resolve();
+    expect(onResolved).toHaveBeenCalledTimes(1);
   });
 });

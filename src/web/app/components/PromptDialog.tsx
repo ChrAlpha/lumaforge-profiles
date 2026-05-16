@@ -5,7 +5,6 @@ export interface PromptField {
   name: string;
   label: string;
   defaultValue?: string;
-  type?: "text" | "password";
   /** Defaults to true; optional fields may be left blank (mirrors the legacy
    * prompts where some inputs aborted on empty and others did not). */
   required?: boolean;
@@ -106,7 +105,7 @@ export function PromptDialog({
                   <input
                     id={fieldId}
                     name={field.name}
-                    type={field.type ?? "text"}
+                    type="text"
                     autoFocus={index === 0}
                     className={inputClass}
                     value={values[field.name] ?? ""}
