@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 
 import { Shell } from "./components/Shell";
+import { usePromptDialog } from "./components/usePromptDialog";
 import {
   initialWorkspaceState,
   workspaceReducer,
@@ -63,8 +64,11 @@ function loadPersistedWorkspace(): WebProfilesWorkspace {
   }
 }
 
-function promptText(message: string, fallback = ""): string {
-  return window.prompt(message, fallback)?.trim() ?? "";
+function releaseDefaults(): { tag: string; publicBaseUrl: string } {
+  return {
+    tag: `v${new Date().toISOString().slice(0, 10).replaceAll("-", ".")}`,
+    publicBaseUrl: "https://profiles.example.com",
+  };
 }
 
 async function readFiles(files: FileList | File[]) {
@@ -146,6 +150,7 @@ export function App() {
     loadPersistedWorkspace,
   );
   const [status, setStatus] = useState("Ready");
+  const { prompt, dialog } = usePromptDialog();
 
   // Credentials/secrets are in-memory only and never persisted, mirroring the
   // legacy `secrets`/`captureSecrets` behaviour.
@@ -188,7 +193,13 @@ export function App() {
   }, [workspace]);
 
   const loadBaselineFromUrl = useCallback(async () => {
-    const url = promptText("S3/R2 channel or release catalog URL");
+    const values = await prompt({
+      title: "Load baseline",
+      fields: [
+        { name: "url", label: "S3/R2 channel or release catalog URL" },
+      ],
+    });
+    const url = values?.url ?? "";
     if (!url) {
       return;
     }
@@ -210,7 +221,7 @@ export function App() {
       now: new Date().toISOString(),
     });
     setStatus(`Loaded ${entries.length} baseline entries.`);
-  }, []);
+  }, [prompt]);
 
   const uploadLuts = useCallback(() => {
     const input = document.createElement("input");
@@ -222,7 +233,17 @@ export function App() {
         if (!input.files || input.files.length === 0) {
           return;
         }
-        const namespace = promptText("Namespace for generated ids", "local");
+        const values = await prompt({
+          title: "Upload LUTs",
+          fields: [
+            {
+              name: "namespace",
+              label: "Namespace for generated ids",
+              defaultValue: "local",
+            },
+          ],
+        });
+        const namespace = values?.namespace ?? "";
         if (!namespace) {
           return;
         }
@@ -238,17 +259,23 @@ export function App() {
       })();
     });
     input.click();
-  }, [workspace]);
+  }, [workspace, prompt]);
 
-  const buildPlan = useCallback(() => {
-    const tag = promptText(
-      "Release tag",
-      `v${new Date().toISOString().slice(0, 10).replaceAll("-", ".")}`,
-    );
-    const publicBaseUrl = promptText(
-      "Public base URL",
-      "https://profiles.example.com",
-    );
+  const buildPlan = useCallback(async () => {
+    const defaults = releaseDefaults();
+    const values = await prompt({
+      title: "Build S3/R2 plan",
+      fields: [
+        { name: "tag", label: "Release tag", defaultValue: defaults.tag },
+        {
+          name: "publicBaseUrl",
+          label: "Public base URL",
+          defaultValue: defaults.publicBaseUrl,
+        },
+      ],
+    });
+    const tag = values?.tag ?? "";
+    const publicBaseUrl = values?.publicBaseUrl ?? "";
     if (!tag || !publicBaseUrl) {
       return;
     }
@@ -261,17 +288,23 @@ export function App() {
     setStatus(
       `Built S3/R2 plan with ${plan.catalog.entries.length} entries and ${plan.objects.length} objects.`,
     );
-  }, [workspace]);
+  }, [workspace, prompt]);
 
-  const exportWorkspace = useCallback(() => {
-    const tag = promptText(
-      "Release tag",
-      `v${new Date().toISOString().slice(0, 10).replaceAll("-", ".")}`,
-    );
-    const publicBaseUrl = promptText(
-      "Public base URL",
-      "https://profiles.example.com",
-    );
+  const exportWorkspace = useCallback(async () => {
+    const defaults = releaseDefaults();
+    const values = await prompt({
+      title: "Export release package",
+      fields: [
+        { name: "tag", label: "Release tag", defaultValue: defaults.tag },
+        {
+          name: "publicBaseUrl",
+          label: "Public base URL",
+          defaultValue: defaults.publicBaseUrl,
+        },
+      ],
+    });
+    const tag = values?.tag ?? "";
+    const publicBaseUrl = values?.publicBaseUrl ?? "";
     if (!tag || !publicBaseUrl) {
       return;
     }
@@ -295,17 +328,23 @@ export function App() {
     setStatus(
       `Exported release package with ${releasePackage.files.length} files. Credentials were not included.`,
     );
-  }, [workspace]);
+  }, [workspace, prompt]);
 
-  const releasePackageFromPrompts = useCallback(() => {
-    const tag = promptText(
-      "Release tag",
-      `v${new Date().toISOString().slice(0, 10).replaceAll("-", ".")}`,
-    );
-    const publicBaseUrl = promptText(
-      "Public base URL",
-      "https://profiles.example.com",
-    );
+  const releasePackageFromPrompts = useCallback(async () => {
+    const defaults = releaseDefaults();
+    const values = await prompt({
+      title: "Release package details",
+      fields: [
+        { name: "tag", label: "Release tag", defaultValue: defaults.tag },
+        {
+          name: "publicBaseUrl",
+          label: "Public base URL",
+          defaultValue: defaults.publicBaseUrl,
+        },
+      ],
+    });
+    const tag = values?.tag ?? "";
+    const publicBaseUrl = values?.publicBaseUrl ?? "";
     if (!tag || !publicBaseUrl) {
       return null;
     }
@@ -315,19 +354,35 @@ export function App() {
       channels: ["stable"],
       generatedAt: new Date().toISOString(),
     });
-  }, [workspace]);
+  }, [workspace, prompt]);
 
   const publishS3 = useCallback(async () => {
-    const releasePackage = releasePackageFromPrompts();
+    const releasePackage = await releasePackageFromPrompts();
     if (!releasePackage) {
       return;
     }
-    const bucket = promptText("S3/R2 bucket");
-    const region = promptText("S3 region", "auto");
-    const endpoint = promptText("S3/R2 endpoint URL");
-    const accessKeyId =
-      s3AccessKeyIdRef.current || promptText("S3/R2 access key id");
-    const secretAccessKey = promptText("S3/R2 secret access key");
+    const hasAccessKeyRef = Boolean(s3AccessKeyIdRef.current);
+    const values = await prompt({
+      title: "Publish to S3/R2",
+      fields: [
+        { name: "bucket", label: "S3/R2 bucket" },
+        { name: "region", label: "S3 region", defaultValue: "auto" },
+        {
+          name: "endpoint",
+          label: "S3/R2 endpoint URL",
+          required: false,
+        },
+        ...(hasAccessKeyRef
+          ? []
+          : [{ name: "accessKeyId", label: "S3/R2 access key id" }]),
+        { name: "secretAccessKey", label: "S3/R2 secret access key" },
+      ],
+    });
+    const bucket = values?.bucket ?? "";
+    const region = values?.region ?? "";
+    const endpoint = values?.endpoint ?? "";
+    const accessKeyId = s3AccessKeyIdRef.current || (values?.accessKeyId ?? "");
+    const secretAccessKey = values?.secretAccessKey ?? "";
     if (!bucket || !accessKeyId || !secretAccessKey) {
       setStatus(
         "S3/R2 publish cancelled: bucket and memory-only credentials are required.",
@@ -347,16 +402,27 @@ export function App() {
     setStatus(
       `Published S3/R2 release: uploaded ${result.uploaded.length}, skipped ${result.skipped.length}.`,
     );
-  }, [releasePackageFromPrompts]);
+  }, [releasePackageFromPrompts, prompt]);
 
   const publishGithub = useCallback(async () => {
-    const releasePackage = releasePackageFromPrompts();
+    const releasePackage = await releasePackageFromPrompts();
     if (!releasePackage) {
       return;
     }
-    const owner = promptText("GitHub owner/org");
-    const repo = promptText("GitHub repository");
-    const token = githubTokenRef.current || promptText("GitHub token");
+    const hasTokenRef = Boolean(githubTokenRef.current);
+    const values = await prompt({
+      title: "Publish GitHub Release",
+      fields: [
+        { name: "owner", label: "GitHub owner/org" },
+        { name: "repo", label: "GitHub repository" },
+        ...(hasTokenRef
+          ? []
+          : [{ name: "token", label: "GitHub token" }]),
+      ],
+    });
+    const owner = values?.owner ?? "";
+    const repo = values?.repo ?? "";
+    const token = githubTokenRef.current || (values?.token ?? "");
     if (!owner || !repo || !token) {
       setStatus(
         "GitHub publish cancelled: owner, repo, and memory-only token are required.",
@@ -371,28 +437,35 @@ export function App() {
     setStatus(
       `Published GitHub Release ${releasePackage.tag}: uploaded ${result.uploadedAssets.length} assets.`,
     );
-  }, [releasePackageFromPrompts]);
+  }, [releasePackageFromPrompts, prompt]);
 
   return (
-    <Shell
-      workspace={workspace}
-      status={status}
-      s3AccessKeyId={s3AccessKeyId}
-      githubToken={githubToken}
-      onS3AccessKeyIdChange={setS3AccessKeyId}
-      onGithubTokenChange={setGithubToken}
-      onLoadBaseline={() => {
-        void loadBaselineFromUrl();
-      }}
-      onUploadLuts={uploadLuts}
-      onBuildS3Plan={buildPlan}
-      onExportRelease={exportWorkspace}
-      onPublishS3={() => {
-        void publishS3();
-      }}
-      onPublishGithub={() => {
-        void publishGithub();
-      }}
-    />
+    <>
+      <Shell
+        workspace={workspace}
+        status={status}
+        s3AccessKeyId={s3AccessKeyId}
+        githubToken={githubToken}
+        onS3AccessKeyIdChange={setS3AccessKeyId}
+        onGithubTokenChange={setGithubToken}
+        onLoadBaseline={() => {
+          void loadBaselineFromUrl();
+        }}
+        onUploadLuts={uploadLuts}
+        onBuildS3Plan={() => {
+          void buildPlan();
+        }}
+        onExportRelease={() => {
+          void exportWorkspace();
+        }}
+        onPublishS3={() => {
+          void publishS3();
+        }}
+        onPublishGithub={() => {
+          void publishGithub();
+        }}
+      />
+      {dialog}
+    </>
   );
 }
