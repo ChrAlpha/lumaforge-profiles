@@ -170,5 +170,12 @@ describe("browser S3 release plan", () => {
     expect(serialized).toContain('TITLE \\"Cinema Warm\\"');
     expect(serialized).not.toContain("s3AccessKeyId");
     expect(serialized).not.toContain("githubToken");
+    const publishPlan = JSON.parse(
+      releasePackage.files.find((file) => file.path === "publish-plan.json")!.body,
+    ) as { objects: Array<{ key: string; localPath: string }> };
+    expect(publishPlan.objects.map((object) => [object.key, object.localPath])).toContainEqual([
+      "releases/v2026.05.16/blobs-manifest.json",
+      "blobs-manifest.json",
+    ]);
   });
 });

@@ -1,5 +1,6 @@
 import "./styles.css";
 
+import { publishBrowserGithubRelease, publishBrowserS3ReleasePackage } from "./publish";
 import { buildBrowserReleasePackage, buildBrowserS3ReleasePlan } from "./release";
 import { renderWorkspaceShell } from "./ui";
 import {
@@ -260,9 +261,67 @@ function captureSecrets() {
     document.querySelector<HTMLInputElement>('[data-secret="github-token"]')?.value ?? "";
 }
 
-function publishPlaceholder(kind: "S3/R2" | "GitHub Release") {
+function releasePackageFromPrompts() {
+  const tag = promptText("Release tag", `v${new Date().toISOString().slice(0, 10).replaceAll("-", ".")}`);
+  const publicBaseUrl = promptText("Public base URL", "https://profiles.example.com");
+  if (!tag || !publicBaseUrl) {
+    return null;
+  }
+  return buildBrowserReleasePackage(reviewedWorkspace(), {
+    tag,
+    publicBaseUrl,
+    channels: ["stable"],
+    generatedAt: new Date().toISOString(),
+  });
+}
+
+async function publishS3() {
   captureSecrets();
-  setStatus(`${kind} publish is ready for API integration. Entered credentials remain in memory only.`);
+  const releasePackage = releasePackageFromPrompts();
+  if (!releasePackage) {
+    return;
+  }
+  const bucket = promptText("S3/R2 bucket");
+  const region = promptText("S3 region", "auto");
+  const endpoint = promptText("S3/R2 endpoint URL");
+  const accessKeyId = secrets.s3AccessKeyId || promptText("S3/R2 access key id");
+  const secretAccessKey = promptText("S3/R2 secret access key");
+  if (!bucket || !accessKeyId || !secretAccessKey) {
+    setStatus("S3/R2 publish cancelled: bucket and memory-only credentials are required.");
+    return;
+  }
+  const result = await publishBrowserS3ReleasePackage(releasePackage, {
+    bucket,
+    region,
+    endpoint: endpoint || undefined,
+    forcePathStyle: Boolean(endpoint),
+    credentials: {
+      accessKeyId,
+      secretAccessKey,
+    },
+  });
+  setStatus(`Published S3/R2 release: uploaded ${result.uploaded.length}, skipped ${result.skipped.length}.`);
+}
+
+async function publishGithub() {
+  captureSecrets();
+  const releasePackage = releasePackageFromPrompts();
+  if (!releasePackage) {
+    return;
+  }
+  const owner = promptText("GitHub owner/org");
+  const repo = promptText("GitHub repository");
+  const token = secrets.githubToken || promptText("GitHub token");
+  if (!owner || !repo || !token) {
+    setStatus("GitHub publish cancelled: owner, repo, and memory-only token are required.");
+    return;
+  }
+  const result = await publishBrowserGithubRelease(releasePackage, {
+    owner,
+    repo,
+    token,
+  });
+  setStatus(`Published GitHub Release ${releasePackage.tag}: uploaded ${result.uploadedAssets.length} assets.`);
 }
 
 function wireActions() {
@@ -274,9 +333,11 @@ function wireActions() {
   });
   document.querySelector('[data-action="build-s3"]')?.addEventListener("click", buildPlan);
   document.querySelector('[data-action="export-release"]')?.addEventListener("click", exportWorkspace);
-  document.querySelector('[data-action="publish-s3"]')?.addEventListener("click", () => publishPlaceholder("S3/R2"));
+  document.querySelector('[data-action="publish-s3"]')?.addEventListener("click", () => {
+    void publishS3();
+  });
   document.querySelector('[data-action="publish-github"]')?.addEventListener("click", () =>
-    publishPlaceholder("GitHub Release"),
+    void publishGithub(),
   );
 }
 

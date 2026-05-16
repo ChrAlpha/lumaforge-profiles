@@ -213,6 +213,7 @@ export function buildBrowserS3ReleasePlan(
 
   const catalogKey = `releases/${options.tag}/catalog.json`;
   const releaseKey = `releases/${options.tag}/release.json`;
+  const blobsManifestKey = `releases/${options.tag}/blobs-manifest.json`;
   const catalog: BrowserS3ReleaseCatalog = {
     schemaVersion: 1,
     id: "lumaforge-profiles",
@@ -252,6 +253,15 @@ export function buildBrowserS3ReleasePlan(
       action: "upload",
       contentType: "application/json",
       cacheControl: cacheControlForKey(releaseKey),
+      size: 0,
+    },
+    {
+      phase: "release-metadata",
+      key: blobsManifestKey,
+      url: joinPublicUrl(publicBaseUrl, blobsManifestKey),
+      action: "upload",
+      contentType: "application/json",
+      cacheControl: cacheControlForKey(blobsManifestKey),
       size: 0,
     },
   );
@@ -371,7 +381,16 @@ export function buildBrowserReleasePackage(
       phase: object.phase,
       key: object.key,
       url: object.url,
-      localPath: object.key,
+      localPath:
+        object.key === `releases/${options.tag}/catalog.json` || object.key.endsWith("/catalog.json")
+          ? "catalog.json"
+          : object.key === `releases/${options.tag}/release.json` || object.key.endsWith("/release.json")
+            ? "release.json"
+            : object.key === `releases/${options.tag}/blobs-manifest.json`
+              ? "blobs-manifest.json"
+              : object.key.startsWith(`releases/${options.tag}/entries/`)
+                ? object.key.replace(`releases/${options.tag}/`, "")
+                : object.key,
       contentType: object.contentType,
       cacheControl: object.cacheControl,
       size: object.size,
