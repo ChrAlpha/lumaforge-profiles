@@ -6,7 +6,6 @@ import { PublishPanel } from "./panels/PublishPanel";
 
 export interface ShellProps {
   workspace: WebProfilesWorkspace;
-  status: string;
   s3AccessKeyId: string;
   githubToken: string;
   onS3AccessKeyIdChange: (value: string) => void;
@@ -22,7 +21,7 @@ export interface ShellProps {
 const navLink = "block py-1 text-sm text-ink-soft hover:text-accent";
 
 export function Shell(props: ShellProps) {
-  const { workspace, status } = props;
+  const { workspace } = props;
 
   return (
     <div
@@ -70,14 +69,6 @@ export function Shell(props: ShellProps) {
           onPublishS3={props.onPublishS3}
           onPublishGithub={props.onPublishGithub}
         />
-        <div
-          data-status
-          role="status"
-          aria-live="polite"
-          className="text-sm text-ink-soft"
-        >
-          {status}
-        </div>
       </main>
     </div>
   );

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 
 import { Shell } from "./components/Shell";
+import { StatusToastProvider, useStatusToast } from "./components/StatusToast";
 import { usePromptDialog } from "./components/usePromptDialog";
 import {
   initialWorkspaceState,
@@ -143,13 +144,13 @@ function reviewedWorkspace(
   };
 }
 
-export function App() {
+function StudioApp() {
   const [workspace, dispatch] = useReducer(
     workspaceReducer,
     undefined,
     loadPersistedWorkspace,
   );
-  const [status, setStatus] = useState("Ready");
+  const { notify } = useStatusToast();
   const { prompt, dialog } = usePromptDialog();
 
   // Credentials/secrets are in-memory only and never persisted, mirroring the
@@ -220,8 +221,8 @@ export function App() {
       baselineEntries: entries,
       now: new Date().toISOString(),
     });
-    setStatus(`Loaded ${entries.length} baseline entries.`);
-  }, [prompt]);
+    notify(`Loaded ${entries.length} baseline entries.`, "success");
+  }, [prompt, notify]);
 
   const uploadLuts = useCallback(() => {
     const input = document.createElement("input");
@@ -255,11 +256,11 @@ export function App() {
           now: new Date().toISOString(),
         });
         dispatch({ type: "set-workspace", workspace: next });
-        setStatus(`Imported ${files.length} LUT file(s).`);
+        notify(`Imported ${files.length} LUT file(s).`, "success");
       })();
     });
     input.click();
-  }, [workspace, prompt]);
+  }, [workspace, prompt, notify]);
 
   const buildPlan = useCallback(async () => {
     const defaults = releaseDefaults();
@@ -285,10 +286,11 @@ export function App() {
       channels: ["stable"],
       generatedAt: new Date().toISOString(),
     });
-    setStatus(
+    notify(
       `Built S3/R2 plan with ${plan.catalog.entries.length} entries and ${plan.objects.length} objects.`,
+      "success",
     );
-  }, [workspace, prompt]);
+  }, [workspace, prompt, notify]);
 
   const exportWorkspace = useCallback(async () => {
     const defaults = releaseDefaults();
@@ -325,10 +327,11 @@ export function App() {
     link.download = `lumaforge-profiles.${tag}.release-package.json`;
     link.click();
     URL.revokeObjectURL(link.href);
-    setStatus(
+    notify(
       `Exported release package with ${releasePackage.files.length} files. Credentials were not included.`,
+      "success",
     );
-  }, [workspace, prompt]);
+  }, [workspace, prompt, notify]);
 
   const releasePackageFromPrompts = useCallback(async () => {
     const defaults = releaseDefaults();
@@ -389,8 +392,9 @@ export function App() {
     const accessKeyId = s3AccessKeyIdRef.current || (values?.accessKeyId ?? "");
     const secretAccessKey = values?.secretAccessKey ?? "";
     if (!bucket || !accessKeyId || !secretAccessKey) {
-      setStatus(
+      notify(
         "S3/R2 publish cancelled: bucket and memory-only credentials are required.",
+        "error",
       );
       return;
     }
@@ -404,10 +408,11 @@ export function App() {
         secretAccessKey,
       },
     });
-    setStatus(
+    notify(
       `Published S3/R2 release: uploaded ${result.uploaded.length}, skipped ${result.skipped.length}.`,
+      "success",
     );
-  }, [releasePackageFromPrompts, prompt]);
+  }, [releasePackageFromPrompts, prompt, notify]);
 
   const publishGithub = useCallback(async () => {
     const releasePackage = await releasePackageFromPrompts();
@@ -429,8 +434,9 @@ export function App() {
     const repo = values?.repo ?? "";
     const token = githubTokenRef.current || (values?.token ?? "");
     if (!owner || !repo || !token) {
-      setStatus(
+      notify(
         "GitHub publish cancelled: owner, repo, and memory-only token are required.",
+        "error",
       );
       return;
     }
@@ -439,16 +445,16 @@ export function App() {
       repo,
       token,
     });
-    setStatus(
+    notify(
       `Published GitHub Release ${releasePackage.tag}: uploaded ${result.uploadedAssets.length} assets.`,
+      "success",
     );
-  }, [releasePackageFromPrompts, prompt]);
+  }, [releasePackageFromPrompts, prompt, notify]);
 
   return (
     <>
       <Shell
         workspace={workspace}
-        status={status}
         s3AccessKeyId={s3AccessKeyId}
         githubToken={githubToken}
         onS3AccessKeyIdChange={setS3AccessKeyId}
@@ -472,5 +478,13 @@ export function App() {
       />
       {dialog}
     </>
+  );
+}
+
+export function App() {
+  return (
+    <StatusToastProvider>
+      <StudioApp />
+    </StatusToastProvider>
   );
 }
