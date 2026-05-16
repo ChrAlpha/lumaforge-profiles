@@ -268,4 +268,38 @@ describe("App", () => {
       expect.objectContaining({ bucket: "my-bucket", region: "" }),
     );
   });
+
+  it("renders the credential fields masked via SecretField with a reveal toggle", () => {
+    render(<App />);
+
+    const s3Key = screen.getByLabelText("S3/R2 access key");
+    const ghToken = screen.getByLabelText("GitHub token");
+    expect(s3Key).toHaveAttribute("type", "password");
+    expect(ghToken).toHaveAttribute("type", "password");
+
+    // Each field exposes a show/hide toggle (default hidden).
+    expect(screen.getAllByRole("button", { name: /show/i })).toHaveLength(2);
+  });
+
+  it("reveals a credential without persisting the secret to localStorage", async () => {
+    const user = userEvent.setup();
+    const setItemSpy = vi.spyOn(Storage.prototype, "setItem");
+
+    render(<App />);
+
+    const s3Key = screen.getByLabelText("S3/R2 access key");
+    await user.type(s3Key, "AKIA-IN-MEMORY");
+    expect(s3Key).toHaveValue("AKIA-IN-MEMORY");
+
+    // The reveal toggle for this field flips it to plain text.
+    const toggle = screen.getAllByRole("button", { name: /show/i })[0];
+    await user.click(toggle);
+    expect(s3Key).toHaveAttribute("type", "text");
+
+    // The secret is never written to localStorage.
+    for (const call of setItemSpy.mock.calls) {
+      expect(String(call[1])).not.toContain("AKIA-IN-MEMORY");
+    }
+    expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+  });
 });
