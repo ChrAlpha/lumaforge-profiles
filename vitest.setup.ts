@@ -19,3 +19,14 @@ if (typeof Element !== "undefined") {
     Element.prototype.releasePointerCapture = () => undefined;
   }
 }
+
+// jsdom does not implement ResizeObserver, which Radix positioning primitives
+// (e.g. Tooltip/Popper) construct on mount. An inert stub lets component tests
+// drive the real Radix code without a "ResizeObserver is not defined" crash.
+if (typeof globalThis.ResizeObserver === "undefined") {
+  globalThis.ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+}

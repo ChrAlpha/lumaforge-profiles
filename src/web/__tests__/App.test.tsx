@@ -109,7 +109,8 @@ describe("App", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("Cinema Warm")).toBeInTheDocument();
+      // Title renders in both the entry table and the manifest switcher tab.
+      expect(screen.getAllByText("Cinema Warm").length).toBeGreaterThan(0);
     });
     expect(screen.getByText(/Imported 1 LUT file/)).toBeInTheDocument();
     expect(dialog).not.toBeInTheDocument();
@@ -213,7 +214,8 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: "Submit" }));
 
     await waitFor(() => {
-      expect(screen.getByText("Vendor Look")).toBeInTheDocument();
+      // Title renders in both the entry table and the manifest switcher tab.
+      expect(screen.getAllByText("Vendor Look").length).toBeGreaterThan(0);
     });
     expect(screen.getByText(/Loaded 1 baseline entries/)).toBeInTheDocument();
     expect(promptSpy).not.toHaveBeenCalled();

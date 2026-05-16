@@ -90,8 +90,9 @@ describe("web UI shell", () => {
     render(<App />);
 
     expect(screen.getByText("LumaForge Profiles Studio")).toBeInTheDocument();
-    expect(screen.getByText("Previous Warm")).toBeInTheDocument();
-    expect(screen.getByText("Cinema Warm")).toBeInTheDocument();
+    // Titles now appear both in the entry table and the manifest switcher tabs.
+    expect(screen.getAllByText("Previous Warm").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Cinema Warm").length).toBeGreaterThan(0);
 
     const batchList = screen.getByRole("list", { name: /upload batches/i });
     expect(within(batchList).getByText(/upload/i)).toBeInTheDocument();
