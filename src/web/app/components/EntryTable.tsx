@@ -11,11 +11,6 @@ export interface EntryTableProps {
   entries: WebWorkspaceEntry[];
 }
 
-/**
- * Plain accessible table of workspace entries. Badges/tooltips and a manifest
- * switcher are intentionally out of scope (later task) — behaviour parity with
- * the legacy string renderer only.
- */
 export function EntryTable({ entries }: EntryTableProps) {
   return (
     <table className="w-full border-collapse text-sm">
