@@ -1,3 +1,4 @@
+import { StrictMode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -29,6 +30,18 @@ describe("App", () => {
     expect(screen.getByText(/LumaForge Profiles Studio/i)).toBeInTheDocument();
   });
 
+  it("does not persist the boot workspace before any user interaction (StrictMode-safe)", () => {
+    const setItemSpy = vi.spyOn(Storage.prototype, "setItem");
+
+    render(
+      <StrictMode>
+        <App />
+      </StrictMode>,
+    );
+
+    expect(setItemSpy).not.toHaveBeenCalled();
+  });
+
   it("rehydrates a persisted workspace from localStorage on mount", () => {
     const persisted = exportPersistableWorkspace(
       createWebProfilesWorkspace({ now: "2026-05-16T00:00:00.000Z" }),
@@ -36,9 +49,12 @@ describe("App", () => {
     );
     localStorage.setItem(STORAGE_KEY, JSON.stringify(persisted));
 
+    const setItemSpy = vi.spyOn(Storage.prototype, "setItem");
+
     render(<App />);
 
     expect(screen.getByText("No upload batches yet")).toBeInTheDocument();
+    expect(setItemSpy).not.toHaveBeenCalled();
   });
 
   it("dispatches an upload batch and renders the new batch + entry", async () => {

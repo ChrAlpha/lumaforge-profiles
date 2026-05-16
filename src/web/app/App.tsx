@@ -156,20 +156,35 @@ export function App() {
   s3AccessKeyIdRef.current = s3AccessKeyId;
   githubTokenRef.current = githubToken;
 
-  // Skip persisting the initial render so we never clobber storage on boot
-  // before the user changes anything.
-  const bootedRef = useRef(false);
+  // A simple "skip the first effect" mount counter is unsafe here: main.tsx
+  // wraps <App/> in <StrictMode>, and React double-invokes effects on mount
+  // (setup -> cleanup -> setup) WITHOUT recreating refs. A boolean/counter
+  // guard would skip run 1 but let run 2 write the untouched boot workspace to
+  // localStorage, clobbering persisted storage before the user does anything.
+  // Instead we compare serialized snapshots: we never write while the
+  // workspace still equals the value it booted with, and we de-dupe repeat
+  // writes of an identical value (so StrictMode's post-change double-fire
+  // persists at most once). Writes only happen once a reducer action has
+  // actually changed the persistable workspace.
+  const bootSnapshotRef = useRef<string | null>(null);
+  if (bootSnapshotRef.current === null) {
+    bootSnapshotRef.current = JSON.stringify(
+      exportPersistableWorkspace(workspace, { includeDraftFileText: true }),
+    );
+  }
+  const lastWrittenRef = useRef<string>(bootSnapshotRef.current);
   useEffect(() => {
-    if (!bootedRef.current) {
-      bootedRef.current = true;
+    const serialized = JSON.stringify(
+      exportPersistableWorkspace(workspace, { includeDraftFileText: true }),
+    );
+    if (
+      serialized === bootSnapshotRef.current ||
+      serialized === lastWrittenRef.current
+    ) {
       return;
     }
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify(
-        exportPersistableWorkspace(workspace, { includeDraftFileText: true }),
-      ),
-    );
+    lastWrittenRef.current = serialized;
+    localStorage.setItem(STORAGE_KEY, serialized);
   }, [workspace]);
 
   const loadBaselineFromUrl = useCallback(async () => {
