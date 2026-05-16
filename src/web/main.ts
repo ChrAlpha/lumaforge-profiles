@@ -1,3 +1,5 @@
+// Legacy vanilla entry — superseded by main.tsx (React). Retained only for
+// the workspace/release/publish/ui tests pending the T2–T8 migration.
 import "./styles.css";
 
 import { publishBrowserGithubRelease, publishBrowserS3ReleasePackage } from "./publish";

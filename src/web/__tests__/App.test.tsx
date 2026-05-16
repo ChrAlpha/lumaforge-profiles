@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { render, screen, cleanup } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { App } from "../app/App";
 
 describe("App", () => {
@@ -9,7 +9,5 @@ describe("App", () => {
     const root = container.querySelector("[data-app-root]");
     expect(root).not.toBeNull();
     expect(screen.getByText(/LumaForge Profiles Studio/i)).toBeInTheDocument();
-
-    cleanup();
   });
 });
