@@ -176,6 +176,19 @@ describe("workspace reducer", () => {
     expect(restored).toEqual(start);
   });
 
+  test("does not mutate the prior state on a transition", () => {
+    const prev = initialWorkspaceState("2026-05-16T00:00:00.000Z");
+    const snapshot = structuredClone(prev);
+
+    workspaceReducer(prev, {
+      type: "load-baseline",
+      baselineEntries: [carriedEntry("org.previous.lut.warm", "Previous Warm")],
+      now: "2026-06-01T00:00:00.000Z",
+    });
+
+    expect(prev).toEqual(snapshot);
+  });
+
   test("ignores an action whose type is not recognized and returns prior state", () => {
     const state = initialWorkspaceState("2026-05-16T00:00:00.000Z");
 

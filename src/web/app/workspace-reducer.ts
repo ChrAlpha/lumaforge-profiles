@@ -38,6 +38,9 @@ export function workspaceReducer(
     case "set-workspace":
       return action.workspace;
     default: {
+      // `never` gives compile-time exhaustiveness; the runtime return keeps
+      // prior state for an unknown action (useReducer-style no-op) rather than
+      // throwing — do not tighten this into a throw.
       const exhaustiveCheck: never = action;
       void exhaustiveCheck;
       return state;
