@@ -5,9 +5,17 @@
  * "darkroom/film" tokens via Tailwind utilities (bg-paper, text-ink, ...),
  * so dark mode is a pure token swap with NO per-component dark: variants.
  *
- * Light is the default. Dark follows the OS via prefers-color-scheme and only
- * redefines the same --color-* tokens below. Text/background pairs are kept at
- * or above WCAG AA contrast in both schemes.
+ * The @theme block below defines the LIGHT palette and is the only @theme in
+ * this file. In Tailwind v4 an @theme block is ALWAYS treated as a theme
+ * definition and its variables are hoisted/merged onto the global :root
+ * regardless of any surrounding @media -- a nested @theme inside the dark
+ * media query would therefore leak the dark values to every user and break
+ * both schemes. So dark mode instead overrides the SAME plain --color-*
+ * custom properties on :root inside the prefers-color-scheme: dark media
+ * query (regular CSS variable overrides, not a nested @theme). The utilities
+ * Tailwind generates reference var(--color-*), so this cleanly swaps the
+ * palette with the OS. Text/background pairs stay at or above WCAG AA
+ * contrast in both schemes.
  */
 @theme {
   --color-paper: oklch(0.97 0.016 86);
@@ -20,9 +28,12 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  @theme {
+  :root {
+    color-scheme: dark;
+
     /* Deep warm charcoal paper, warm off-white ink. Accent/positive are
-     * lightened so they keep AA contrast against the dark paper/surface. */
+     * lightened so they keep AA contrast against the dark paper/surface.
+     * These override the plain CSS vars emitted by @theme above. */
     --color-paper: oklch(0.21 0.012 86);
     --color-surface: oklch(0.25 0.013 86);
     --color-ink: oklch(0.93 0.016 86);
@@ -30,9 +41,5 @@
     --color-line: oklch(0.36 0.015 86);
     --color-accent: oklch(0.72 0.13 45);
     --color-positive: oklch(0.74 0.13 150);
-  }
-
-  :root {
-    color-scheme: dark;
   }
 }
