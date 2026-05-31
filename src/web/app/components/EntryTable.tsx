@@ -46,39 +46,54 @@ function WarningsCell({ entry }: { entry: WebWorkspaceEntry }) {
 export function EntryTable({ entries }: EntryTableProps) {
   return (
     <Tooltip.Provider delayDuration={0} disableHoverableContent>
-      <table className="w-full border-collapse text-sm">
-        <thead>
-          <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-ink-soft">
-            <th className="py-2.5 pr-4 font-semibold">Title</th>
-            <th className="py-2.5 pr-4 font-semibold">Status</th>
-            <th className="py-2.5 pr-4 font-semibold">Batch</th>
-            <th className="py-2.5 pr-4 font-semibold">SHA-256</th>
-            <th className="py-2.5 font-semibold">Review</th>
-          </tr>
-        </thead>
-        <tbody>
-          {entries.map((entry) => {
-            const asset = entry.manifest.assets[0];
-            return (
-              <tr key={entry.id} className="border-b border-line/60 align-top">
-                <td className="py-2.5 pr-4 font-medium text-ink">{entry.manifest.title}</td>
-                <td className="py-2.5 pr-4">
-                  <StatusBadge status={entry.status} />
-                </td>
-                <td className="py-2.5 pr-4 text-ink-soft">
-                  {entry.batchId ?? "baseline"}
-                </td>
-                <td className="py-2.5 pr-4 font-mono text-xs text-ink-soft">
-                  {asset?.sha256.slice(0, 12) ?? ""}
-                </td>
-                <td className="py-2.5 text-ink-soft">
-                  <WarningsCell entry={entry} />
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse text-sm">
+          <thead>
+            <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-ink-soft">
+              <th className="py-2.5 pr-4 font-semibold">Title</th>
+              <th className="py-2.5 pr-4 font-semibold">Status</th>
+              <th className="py-2.5 pr-4 font-semibold">Batch</th>
+              <th className="py-2.5 pr-4 font-semibold">SHA-256</th>
+              <th className="py-2.5 font-semibold">Review</th>
+            </tr>
+          </thead>
+          <tbody>
+            {entries.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="py-4 text-ink-soft">
+                  No LUT entries yet. Load baseline or upload LUTs to begin.
                 </td>
               </tr>
-            );
-          })}
-        </tbody>
-      </table>
+            ) : (
+              entries.map((entry) => {
+                const asset = entry.manifest.assets[0];
+                return (
+                  <tr
+                    key={entry.id}
+                    className="border-b border-line/60 align-top"
+                  >
+                    <td className="py-2.5 pr-4 font-medium text-ink">
+                      {entry.manifest.title}
+                    </td>
+                    <td className="py-2.5 pr-4">
+                      <StatusBadge status={entry.status} />
+                    </td>
+                    <td className="py-2.5 pr-4 text-ink-soft">
+                      {entry.batchId ?? "baseline"}
+                    </td>
+                    <td className="py-2.5 pr-4 font-mono text-xs text-ink-soft">
+                      {asset?.sha256.slice(0, 12) ?? ""}
+                    </td>
+                    <td className="py-2.5 text-ink-soft">
+                      <WarningsCell entry={entry} />
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
     </Tooltip.Provider>
   );
 }

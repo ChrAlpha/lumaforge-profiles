@@ -10,6 +10,10 @@ export interface LibraryPanelProps {
 const actionButton =
   "rounded-md border border-line bg-surface px-3.5 py-2 text-sm font-medium text-ink transition-colors hover:border-accent hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent";
 
+function lutCountLabel(count: number) {
+  return `${count} ${count === 1 ? "LUT" : "LUTs"}`;
+}
+
 export function LibraryPanel({
   workspace,
   onLoadBaseline,
@@ -40,8 +44,14 @@ export function LibraryPanel({
           <li>No upload batches yet</li>
         ) : (
           workspace.batches.map((batch) => (
-            <li key={batch.id}>
-              {batch.name} <span className="text-ink-soft">{batch.entryIds.length} LUTs</span>
+            <li
+              key={batch.id}
+              className="flex flex-wrap items-center gap-x-2 gap-y-1"
+            >
+              <span className="font-medium text-ink">{batch.name}</span>
+              <span className="rounded border border-line px-2 py-0.5 text-xs">
+                {lutCountLabel(batch.entryIds.length)}
+              </span>
             </li>
           ))
         )}

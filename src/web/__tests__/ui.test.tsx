@@ -95,7 +95,8 @@ describe("web UI shell", () => {
     expect(screen.getAllByText("Cinema Warm").length).toBeGreaterThan(0);
 
     const batchList = screen.getByRole("list", { name: /upload batches/i });
-    expect(within(batchList).getByText(/upload/i)).toBeInTheDocument();
+    expect(within(batchList).getByText("upload")).toBeInTheDocument();
+    expect(within(batchList).getByText("1 LUT")).toBeInTheDocument();
 
     expect(screen.getByText("Manifest preview")).toBeInTheDocument();
     expect(

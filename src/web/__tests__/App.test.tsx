@@ -163,6 +163,42 @@ describe("App", () => {
     clickSpy.mockRestore();
   });
 
+  it("shows an error toast and keeps the workspace unchanged when upload file reading fails", async () => {
+    const user = userEvent.setup();
+
+    render(<App />);
+
+    const file = new File([""], "Missing.cube", {
+      type: "application/x-cube-lut",
+    });
+    vi.spyOn(file, "text").mockRejectedValue(
+      new Error("A requested file or directory could not be found."),
+    );
+    const clickSpy = vi
+      .spyOn(HTMLInputElement.prototype, "click")
+      .mockImplementation(function (this: HTMLInputElement) {
+        Object.defineProperty(this, "files", {
+          configurable: true,
+          value: [file],
+        });
+        this.dispatchEvent(new Event("change"));
+      });
+
+    await user.click(screen.getByRole("button", { name: "Upload LUTs" }));
+    await screen.findByRole("dialog", { name: "Upload LUTs" });
+    await user.click(screen.getByRole("button", { name: "Submit" }));
+
+    expect(
+      await screen.findByText(
+        "Upload failed: A requested file or directory could not be found.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText("No upload batches yet")).toBeInTheDocument();
+    expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+
+    clickSpy.mockRestore();
+  });
+
   it("loads baseline entries from a catalog URL collected via the dialog", async () => {
     const user = userEvent.setup();
     const promptSpy = vi.spyOn(window, "prompt");

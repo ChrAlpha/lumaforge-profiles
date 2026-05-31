@@ -58,6 +58,16 @@ const ALL_STATUSES: WebWorkspaceEntryStatus[] = [
 afterEach(cleanup);
 
 describe("EntryTable status badge", () => {
+  it("renders an actionable empty state instead of bare headers when there are no entries", () => {
+    render(<EntryTable entries={[]} />);
+
+    expect(
+      screen.getByText(
+        "No LUT entries yet. Load baseline or upload LUTs to begin.",
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("renders each status as a badge whose accessible text contains the status", () => {
     render(
       <EntryTable

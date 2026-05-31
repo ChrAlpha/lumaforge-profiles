@@ -3,6 +3,7 @@ import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { Shell } from "./components/Shell";
 import { StatusToastProvider, useStatusToast } from "./components/StatusToast";
 import { usePromptDialog } from "./components/usePromptDialog";
+import { messageFromError, promptReleaseOptions } from "./prompt-helpers";
 import {
   initialWorkspaceState,
   workspaceReducer,
@@ -63,13 +64,6 @@ function loadPersistedWorkspace(): WebProfilesWorkspace {
   } catch {
     return initialWorkspaceState(new Date().toISOString());
   }
-}
-
-function releaseDefaults(): { tag: string; publicBaseUrl: string } {
-  return {
-    tag: `v${new Date().toISOString().slice(0, 10).replaceAll("-", ".")}`,
-    publicBaseUrl: "https://profiles.example.com",
-  };
 }
 
 async function readFiles(files: FileList | File[]) {
@@ -204,24 +198,28 @@ function StudioApp() {
     if (!url) {
       return;
     }
-    const catalog = (await fetch(url).then((response) =>
-      response.json(),
-    )) as ReleaseCatalog;
-    const entries = await Promise.all(
-      catalog.entries.map(async (entry) =>
-        carriedEntryFromReleaseDocument(
-          (await fetch(entry.entryUrl).then((response) =>
-            response.json(),
-          )) as ReleaseEntryDocument,
+    try {
+      const catalog = (await fetch(url).then((response) =>
+        response.json(),
+      )) as ReleaseCatalog;
+      const entries = await Promise.all(
+        catalog.entries.map(async (entry) =>
+          carriedEntryFromReleaseDocument(
+            (await fetch(entry.entryUrl).then((response) =>
+              response.json(),
+            )) as ReleaseEntryDocument,
+          ),
         ),
-      ),
-    );
-    dispatch({
-      type: "load-baseline",
-      baselineEntries: entries,
-      now: new Date().toISOString(),
-    });
-    notify(`Loaded ${entries.length} baseline entries.`, "success");
+      );
+      dispatch({
+        type: "load-baseline",
+        baselineEntries: entries,
+        now: new Date().toISOString(),
+      });
+      notify(`Loaded ${entries.length} baseline entries.`, "success");
+    } catch (error) {
+      notify(`Load baseline failed: ${messageFromError(error)}`, "error");
+    }
   }, [prompt, notify]);
 
   const uploadLuts = useCallback(() => {
@@ -231,224 +229,221 @@ function StudioApp() {
     input.multiple = true;
     input.addEventListener("change", () => {
       void (async () => {
-        if (!input.files || input.files.length === 0) {
-          return;
+        try {
+          if (!input.files || input.files.length === 0) {
+            return;
+          }
+          const values = await prompt({
+            title: "Upload LUTs",
+            fields: [
+              {
+                name: "namespace",
+                label: "Namespace for generated ids",
+                defaultValue: "local",
+              },
+            ],
+          });
+          const namespace = values?.namespace ?? "";
+          if (!namespace) {
+            return;
+          }
+          const files = await readFiles(input.files);
+          const next = await addLutUploadBatch(workspace, {
+            batchName: `Upload ${workspace.batches.length + 1}`,
+            namespace,
+            files,
+            now: new Date().toISOString(),
+          });
+          dispatch({ type: "set-workspace", workspace: next });
+          notify(`Imported ${files.length} LUT file(s).`, "success");
+        } catch (error) {
+          notify(`Upload failed: ${messageFromError(error)}`, "error");
         }
-        const values = await prompt({
-          title: "Upload LUTs",
-          fields: [
-            {
-              name: "namespace",
-              label: "Namespace for generated ids",
-              defaultValue: "local",
-            },
-          ],
-        });
-        const namespace = values?.namespace ?? "";
-        if (!namespace) {
-          return;
-        }
-        const files = await readFiles(input.files);
-        const next = await addLutUploadBatch(workspace, {
-          batchName: `Upload ${workspace.batches.length + 1}`,
-          namespace,
-          files,
-          now: new Date().toISOString(),
-        });
-        dispatch({ type: "set-workspace", workspace: next });
-        notify(`Imported ${files.length} LUT file(s).`, "success");
       })();
     });
     input.click();
   }, [workspace, prompt, notify]);
 
   const buildPlan = useCallback(async () => {
-    const defaults = releaseDefaults();
-    const values = await prompt({
-      title: "Build S3/R2 plan",
-      fields: [
-        { name: "tag", label: "Release tag", defaultValue: defaults.tag },
-        {
-          name: "publicBaseUrl",
-          label: "Public base URL",
-          defaultValue: defaults.publicBaseUrl,
-        },
-      ],
-    });
-    const tag = values?.tag ?? "";
-    const publicBaseUrl = values?.publicBaseUrl ?? "";
-    if (!tag || !publicBaseUrl) {
-      return;
+    try {
+      const releaseOptions = await promptReleaseOptions(
+        prompt,
+        "Build S3/R2 plan",
+      );
+      if (!releaseOptions) {
+        return;
+      }
+      const plan = buildBrowserS3ReleasePlan(reviewedWorkspace(workspace), {
+        tag: releaseOptions.tag,
+        publicBaseUrl: releaseOptions.publicBaseUrl,
+        channels: ["stable"],
+        generatedAt: new Date().toISOString(),
+      });
+      notify(
+        `Built S3/R2 plan with ${plan.catalog.entries.length} entries and ${plan.objects.length} objects.`,
+        "success",
+      );
+    } catch (error) {
+      notify(`Build S3/R2 plan failed: ${messageFromError(error)}`, "error");
     }
-    const plan = buildBrowserS3ReleasePlan(reviewedWorkspace(workspace), {
-      tag,
-      publicBaseUrl,
-      channels: ["stable"],
-      generatedAt: new Date().toISOString(),
-    });
-    notify(
-      `Built S3/R2 plan with ${plan.catalog.entries.length} entries and ${plan.objects.length} objects.`,
-      "success",
-    );
   }, [workspace, prompt, notify]);
 
   const exportWorkspace = useCallback(async () => {
-    const defaults = releaseDefaults();
-    const values = await prompt({
-      title: "Export release package",
-      fields: [
-        { name: "tag", label: "Release tag", defaultValue: defaults.tag },
+    try {
+      const releaseOptions = await promptReleaseOptions(
+        prompt,
+        "Export release package",
+      );
+      if (!releaseOptions) {
+        return;
+      }
+      const releasePackage = buildBrowserReleasePackage(
+        reviewedWorkspace(workspace),
         {
-          name: "publicBaseUrl",
-          label: "Public base URL",
-          defaultValue: defaults.publicBaseUrl,
+          tag: releaseOptions.tag,
+          publicBaseUrl: releaseOptions.publicBaseUrl,
+          channels: ["stable"],
+          generatedAt: new Date().toISOString(),
         },
-      ],
-    });
-    const tag = values?.tag ?? "";
-    const publicBaseUrl = values?.publicBaseUrl ?? "";
-    if (!tag || !publicBaseUrl) {
-      return;
+      );
+      const blob = new Blob([JSON.stringify(releasePackage, null, 2)], {
+        type: "application/json",
+      });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `lumaforge-profiles.${releaseOptions.tag}.release-package.json`;
+      link.click();
+      URL.revokeObjectURL(link.href);
+      notify(
+        `Exported release package with ${releasePackage.files.length} files. Credentials were not included.`,
+        "success",
+      );
+    } catch (error) {
+      notify(
+        `Export release package failed: ${messageFromError(error)}`,
+        "error",
+      );
     }
-    const releasePackage = buildBrowserReleasePackage(
-      reviewedWorkspace(workspace),
-      {
-        tag,
-        publicBaseUrl,
-        channels: ["stable"],
-        generatedAt: new Date().toISOString(),
-      },
-    );
-    const blob = new Blob([JSON.stringify(releasePackage, null, 2)], {
-      type: "application/json",
-    });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `lumaforge-profiles.${tag}.release-package.json`;
-    link.click();
-    URL.revokeObjectURL(link.href);
-    notify(
-      `Exported release package with ${releasePackage.files.length} files. Credentials were not included.`,
-      "success",
-    );
   }, [workspace, prompt, notify]);
 
   const releasePackageFromPrompts = useCallback(async () => {
-    const defaults = releaseDefaults();
-    const values = await prompt({
-      title: "Release package details",
-      fields: [
-        { name: "tag", label: "Release tag", defaultValue: defaults.tag },
-        {
-          name: "publicBaseUrl",
-          label: "Public base URL",
-          defaultValue: defaults.publicBaseUrl,
-        },
-      ],
-    });
-    const tag = values?.tag ?? "";
-    const publicBaseUrl = values?.publicBaseUrl ?? "";
-    if (!tag || !publicBaseUrl) {
+    const releaseOptions = await promptReleaseOptions(
+      prompt,
+      "Release package details",
+    );
+    if (!releaseOptions) {
       return null;
     }
     return buildBrowserReleasePackage(reviewedWorkspace(workspace), {
-      tag,
-      publicBaseUrl,
+      tag: releaseOptions.tag,
+      publicBaseUrl: releaseOptions.publicBaseUrl,
       channels: ["stable"],
       generatedAt: new Date().toISOString(),
     });
   }, [workspace, prompt]);
 
   const publishS3 = useCallback(async () => {
-    const releasePackage = await releasePackageFromPrompts();
-    if (!releasePackage) {
-      return;
-    }
-    const hasAccessKeyRef = Boolean(s3AccessKeyIdRef.current);
-    const values = await prompt({
-      title: "Publish to S3/R2",
-      fields: [
-        { name: "bucket", label: "S3/R2 bucket" },
-        {
-          name: "region",
-          label: "S3 region",
-          defaultValue: "auto",
-          required: false,
+    try {
+      const releasePackage = await releasePackageFromPrompts();
+      if (!releasePackage) {
+        return;
+      }
+      const hasAccessKeyRef = Boolean(s3AccessKeyIdRef.current);
+      const values = await prompt({
+        title: "Publish to S3/R2",
+        fields: [
+          { name: "bucket", label: "S3/R2 bucket" },
+          {
+            name: "region",
+            label: "S3 region",
+            defaultValue: "auto",
+            required: false,
+          },
+          {
+            name: "endpoint",
+            label: "S3/R2 endpoint URL",
+            required: false,
+          },
+          ...(hasAccessKeyRef
+            ? []
+            : [{ name: "accessKeyId", label: "S3/R2 access key id" }]),
+          { name: "secretAccessKey", label: "S3/R2 secret access key" },
+        ],
+      });
+      const bucket = values?.bucket ?? "";
+      const region = values?.region ?? "";
+      const endpoint = values?.endpoint ?? "";
+      const accessKeyId =
+        s3AccessKeyIdRef.current || (values?.accessKeyId ?? "");
+      const secretAccessKey = values?.secretAccessKey ?? "";
+      if (!bucket || !accessKeyId || !secretAccessKey) {
+        notify(
+          "S3/R2 publish cancelled: bucket and memory-only credentials are required.",
+          "error",
+        );
+        return;
+      }
+      const result = await publishBrowserS3ReleasePackage(releasePackage, {
+        bucket,
+        region,
+        endpoint: endpoint || undefined,
+        forcePathStyle: Boolean(endpoint),
+        credentials: {
+          accessKeyId,
+          secretAccessKey,
         },
-        {
-          name: "endpoint",
-          label: "S3/R2 endpoint URL",
-          required: false,
-        },
-        ...(hasAccessKeyRef
-          ? []
-          : [{ name: "accessKeyId", label: "S3/R2 access key id" }]),
-        { name: "secretAccessKey", label: "S3/R2 secret access key" },
-      ],
-    });
-    const bucket = values?.bucket ?? "";
-    const region = values?.region ?? "";
-    const endpoint = values?.endpoint ?? "";
-    const accessKeyId = s3AccessKeyIdRef.current || (values?.accessKeyId ?? "");
-    const secretAccessKey = values?.secretAccessKey ?? "";
-    if (!bucket || !accessKeyId || !secretAccessKey) {
+      });
       notify(
-        "S3/R2 publish cancelled: bucket and memory-only credentials are required.",
-        "error",
+        `Published S3/R2 release: uploaded ${result.uploaded.length}, skipped ${result.skipped.length}.`,
+        "success",
       );
-      return;
+    } catch (error) {
+      notify(`Publish S3/R2 failed: ${messageFromError(error)}`, "error");
     }
-    const result = await publishBrowserS3ReleasePackage(releasePackage, {
-      bucket,
-      region,
-      endpoint: endpoint || undefined,
-      forcePathStyle: Boolean(endpoint),
-      credentials: {
-        accessKeyId,
-        secretAccessKey,
-      },
-    });
-    notify(
-      `Published S3/R2 release: uploaded ${result.uploaded.length}, skipped ${result.skipped.length}.`,
-      "success",
-    );
   }, [releasePackageFromPrompts, prompt, notify]);
 
   const publishGithub = useCallback(async () => {
-    const releasePackage = await releasePackageFromPrompts();
-    if (!releasePackage) {
-      return;
-    }
-    const hasTokenRef = Boolean(githubTokenRef.current);
-    const values = await prompt({
-      title: "Publish GitHub Release",
-      fields: [
-        { name: "owner", label: "GitHub owner/org" },
-        { name: "repo", label: "GitHub repository" },
-        ...(hasTokenRef
-          ? []
-          : [{ name: "token", label: "GitHub token" }]),
-      ],
-    });
-    const owner = values?.owner ?? "";
-    const repo = values?.repo ?? "";
-    const token = githubTokenRef.current || (values?.token ?? "");
-    if (!owner || !repo || !token) {
+    try {
+      const releasePackage = await releasePackageFromPrompts();
+      if (!releasePackage) {
+        return;
+      }
+      const hasTokenRef = Boolean(githubTokenRef.current);
+      const values = await prompt({
+        title: "Publish GitHub Release",
+        fields: [
+          { name: "owner", label: "GitHub owner/org" },
+          { name: "repo", label: "GitHub repository" },
+          ...(hasTokenRef
+            ? []
+            : [{ name: "token", label: "GitHub token" }]),
+        ],
+      });
+      const owner = values?.owner ?? "";
+      const repo = values?.repo ?? "";
+      const token = githubTokenRef.current || (values?.token ?? "");
+      if (!owner || !repo || !token) {
+        notify(
+          "GitHub publish cancelled: owner, repo, and memory-only token are required.",
+          "error",
+        );
+        return;
+      }
+      const result = await publishBrowserGithubRelease(releasePackage, {
+        owner,
+        repo,
+        token,
+      });
       notify(
-        "GitHub publish cancelled: owner, repo, and memory-only token are required.",
+        `Published GitHub Release ${releasePackage.tag}: uploaded ${result.uploadedAssets.length} assets.`,
+        "success",
+      );
+    } catch (error) {
+      notify(
+        `Publish GitHub Release failed: ${messageFromError(error)}`,
         "error",
       );
-      return;
     }
-    const result = await publishBrowserGithubRelease(releasePackage, {
-      owner,
-      repo,
-      token,
-    });
-    notify(
-      `Published GitHub Release ${releasePackage.tag}: uploaded ${result.uploadedAssets.length} assets.`,
-      "success",
-    );
   }, [releasePackageFromPrompts, prompt, notify]);
 
   return (
